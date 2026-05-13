@@ -19,6 +19,10 @@
             position: fixed;
             width: 100%;
             height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 2em;
         }
         .glass {
             background: rgba(30, 41, 59, 0.7);
@@ -27,51 +31,48 @@
         }
         canvas {
             display: block;
-            margin: 0 auto;
             background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
-            border-radius: 2rem;
+            border-radius: 2.5rem;
             width: 100%;
             max-width: 400px;
-            height: 70vh;
+            height: 65vh;
             border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
         }
     </style>
 </head>
-<body class="flex flex-col items-center justify-between py-8 px-4">
+<body class="py-8 px-4">
 
-    <div class="w-full max-w-md flex items-center justify-between mb-4">
-        <a href="index.html" class="w-12 h-12 glass rounded-2xl flex items-center justify-center text-slate-400">
+    <div class="w-full max-w-md flex items-center justify-between mb-6">
+        <a href="index.html" class="w-12 h-12 glass rounded-2xl flex items-center justify-center text-slate-400 active:scale-90 transition-transform">
             <i class="fa-solid fa-arrow-left"></i>
         </a>
         <div class="glass px-6 py-2 rounded-2xl flex items-center gap-3">
-            <span class="text-xs font-bold text-slate-500 uppercase tracking-widest">Score</span>
-            <span id="score-val" class="font-bold text-xl text-indigo-400">0</span>
+            <span class="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Score</span>
+            <span id="score-val" class="font-bold text-xl text-blue-400">0</span>
         </div>
-        <div class="w-12"></div> </div>
+        <div class="w-12"></div>
+    </div>
 
-    <div class="relative w-full max-w-[400px] group">
+    <div class="relative w-full max-w-[400px]">
         <canvas id="gameCanvas"></canvas>
         
-        <div id="overlay" class="absolute inset-0 bg-slate-950/60 backdrop-blur-sm rounded-[2rem] flex flex-col items-center justify-center text-center p-6 transition-all">
-            <div id="start-content">
-                <div class="w-20 h-20 bg-indigo-500/20 text-indigo-400 rounded-full flex items-center justify-center text-3xl mb-4 mx-auto animate-bounce">
+        <div id="overlay" class="absolute inset-0 bg-slate-950/60 backdrop-blur-sm rounded-[2.5rem] flex flex-col items-center justify-center text-center p-6 z-50">
+            <div id="ui-content">
+                <div id="icon-box" class="w-20 h-20 bg-blue-500/20 text-blue-400 rounded-full flex items-center justify-center text-3xl mb-4 mx-auto animate-bounce">
                     <i class="fa-solid fa-rocket"></i>
                 </div>
-                <h2 class="text-2xl font-bold mb-2">Prêt pour le décollage ?</h2>
-                <p class="text-slate-400 mb-6 text-sm">Touche l'écran pour voler</p>
-                <button onclick="startGame()" class="bg-indigo-500 text-white px-8 py-3 rounded-2xl font-bold shadow-lg shadow-indigo-500/20">Démarrer</button>
-            </div>
-            
-            <div id="death-content" class="hidden">
-                <h2 class="text-3xl font-bold text-white mb-2">Crash ! 💥</h2>
-                <p id="final-msg" class="text-slate-300 mb-6 font-medium"></p>
-                <button onclick="startGame()" class="bg-indigo-500 text-white px-8 py-3 rounded-2xl font-bold">Réessayer</button>
+                <h2 id="title" class="text-2xl font-bold mb-2 text-white">Flappy Space</h2>
+                <p id="msg" class="text-slate-400 mb-8 text-sm">Touche pour faire décoller la fusée</p>
+                <button id="main-btn" class="bg-blue-500 text-white px-10 py-4 rounded-2xl font-bold shadow-lg shadow-blue-500/20 active:scale-95 transition-all">
+                    DÉMARRER
+                </button>
             </div>
         </div>
     </div>
 
-    <div class="mt-4 text-slate-500 text-xs uppercase font-bold tracking-[0.2em] animate-pulse">
-        Touche pour monter
+    <div class="mt-8 text-slate-500 text-[10px] uppercase font-bold tracking-[0.3em] animate-pulse">
+        Tapote pour monter
     </div>
 
     <script>
@@ -79,40 +80,38 @@
         const ctx = canvas.getContext('2d');
         const scoreDisplay = document.getElementById('score-val');
         const overlay = document.getElementById('overlay');
-        const startContent = document.getElementById('start-content');
-        const deathContent = document.getElementById('death-content');
+        const mainBtn = document.getElementById('main-btn');
+        const titleText = document.getElementById('title');
+        const msgText = document.getElementById('msg');
+        const iconBox = document.getElementById('icon-box');
 
-        // Ajustement taille canvas
         canvas.width = 400;
         canvas.height = 600;
 
         let rocket, pipes, score, gameActive, frame;
-        const gravity = 0.25;
-        const jump = -5;
-        const pipeWidth = 60;
-        const pipeGap = 160;
+        const gravity = 0.22;
+        const jump = -4.8;
+        const pipeWidth = 65;
+        const pipeGap = 170;
 
         function init() {
-            rocket = { x: 50, y: 300, w: 34, h: 24, velocity: 0 };
+            rocket = { x: 60, y: 300, w: 34, h: 24, velocity: 0 };
             pipes = [];
             score = 0;
             gameActive = false;
             scoreDisplay.innerText = "0";
-            render();
+            draw();
         }
 
         function startGame() {
             init();
             gameActive = true;
             overlay.classList.add('hidden');
-            startContent.classList.add('hidden');
-            deathContent.classList.add('hidden');
             animate();
         }
 
         function animate() {
             if (!gameActive) return;
-            
             update();
             draw();
             frame = requestAnimationFrame(animate);
@@ -122,28 +121,22 @@
             rocket.velocity += gravity;
             rocket.y += rocket.velocity;
 
-            // Sortie écran
             if (rocket.y + rocket.h > canvas.height || rocket.y < 0) {
                 gameOver();
             }
 
-            // Gestion tuyaux
-            if (pipes.length === 0 || pipes[pipes.length - 1].x < canvas.width - 200) {
-                let pipeY = Math.random() * (canvas.height - pipeGap - 100) + 50;
+            if (pipes.length === 0 || pipes[pipes.length - 1].x < canvas.width - 220) {
+                let pipeY = Math.random() * (canvas.height - pipeGap - 120) + 60;
                 pipes.push({ x: canvas.width, y: pipeY, passed: false });
             }
 
-            pipes.forEach((pipe, i) => {
-                pipe.x -= 2.5; // Vitesse de défilement
-
-                // Collision
+            pipes.forEach((pipe) => {
+                pipe.x -= 2.8;
                 if (rocket.x < pipe.x + pipeWidth &&
                     rocket.x + rocket.w > pipe.x &&
                     (rocket.y < pipe.y || rocket.y + rocket.h > pipe.y + pipeGap)) {
                     gameOver();
                 }
-
-                // Point gagné
                 if (!pipe.passed && rocket.x > pipe.x + pipeWidth) {
                     pipe.passed = true;
                     score++;
@@ -152,38 +145,36 @@
                 }
             });
 
-            // Nettoyage tuyaux
             if (pipes.length > 0 && pipes[0].x < -pipeWidth) pipes.shift();
         }
 
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // Dessiner tuyaux
+            // Obstacles néons
             pipes.forEach(pipe => {
-                ctx.fillStyle = "rgba(99, 102, 241, 0.3)";
-                ctx.strokeStyle = "rgba(99, 102, 241, 0.8)";
-                ctx.lineWidth = 2;
+                ctx.fillStyle = "rgba(59, 130, 246, 0.2)";
+                ctx.strokeStyle = "rgba(59, 130, 246, 0.6)";
+                ctx.lineWidth = 3;
                 
                 // Haut
                 ctx.beginPath();
-                ctx.roundRect(pipe.x, 0, pipeWidth, pipe.y, [0, 0, 10, 10]);
+                ctx.roundRect(pipe.x, 0, pipeWidth, pipe.y, [0, 0, 15, 15]);
                 ctx.fill(); ctx.stroke();
 
                 // Bas
                 ctx.beginPath();
-                ctx.roundRect(pipe.x, pipe.y + pipeGap, pipeWidth, canvas.height - (pipe.y + pipeGap), [10, 10, 0, 0]);
+                ctx.roundRect(pipe.x, pipe.y + pipeGap, pipeWidth, canvas.height - (pipe.y + pipeGap), [15, 15, 0, 0]);
                 ctx.fill(); ctx.stroke();
             });
 
-            // Dessiner Fusée
-            ctx.font = "30px serif";
+            // Fusée avec rotation
+            ctx.font = "32px serif";
             ctx.save();
             ctx.translate(rocket.x + rocket.w/2, rocket.y + rocket.h/2);
-            // Rotation selon la vitesse
-            let angle = Math.min(Math.PI/4, Math.max(-Math.PI/4, rocket.velocity * 0.1));
+            let angle = Math.min(Math.PI/4, Math.max(-Math.PI/4, rocket.velocity * 0.12));
             ctx.rotate(angle);
-            ctx.fillText("🚀", -15, 10);
+            ctx.fillText("🚀", -16, 12);
             ctx.restore();
         }
 
@@ -192,25 +183,41 @@
             cancelAnimationFrame(frame);
             if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
             
-            document.getElementById('final-msg').innerText = `Ton score est de ${score} points !`;
+            titleText.innerText = "CRASH !";
+            msgText.innerText = `Score final : ${score}`;
+            iconBox.innerHTML = '<i class="fa-solid fa-explosion"></i>';
+            iconBox.classList.replace('text-blue-400', 'text-red-400');
+            mainBtn.innerText = "RÉESSAYER";
             overlay.classList.remove('hidden');
-            deathContent.classList.remove('hidden');
         }
 
-        // Input
-        const handleJump = () => {
+        function handleInput(e) {
             if (gameActive) {
                 rocket.velocity = jump;
+                if (e) e.preventDefault();
             }
-        };
+        }
+
+        // Ecouteurs d'événements
+        mainBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            startGame();
+        });
 
         window.addEventListener('touchstart', (e) => {
-            if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'A' && e.target.tagName !== 'I') {
-                handleJump();
+            if (gameActive) handleInput(e);
+        }, { passive: false });
+
+        window.addEventListener('mousedown', () => {
+            if (gameActive) handleInput();
+        });
+
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                if (!gameActive && !overlay.classList.contains('hidden')) startGame();
+                else handleInput();
             }
         });
-        
-        window.addEventListener('keydown', (e) => { if (e.code === 'Space') handleJump(); });
 
         init();
     </script>

@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+    <title>Neon Launch 🚀</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'Outfit', sans-serif; background: #020617; color: #f8fafc; touch-action: none; overflow: hidden; position: fixed; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; }
+        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        canvas { display: block; background: #010409; border-radius: 1.5rem; width: 100%; max-width: 400px; height: 50vh; border: 2px solid rgba(34, 211, 238, 0.2); }
+        .power-bar-inner { transition: height 0.05s linear; background: linear-gradient(to top, #06b6d4, #f43f5e); }
+    </style>
+</head>
+<body class="py-6 px-4">
+
+    <div class="w-full max-w-md flex items-center justify-between mb-4">
+        <a href="index.html" class="w-10 h-10 glass rounded-xl flex items-center justify-center text-slate-400"><i class="fa-solid fa-arrow-left"></i></a>
+        <div class="flex gap-2">
+            <div class="glass px-4 py-1 rounded-xl flex items-center gap-2">
+                <i class="fa-solid fa-coins text-yellow-400"></i>
+                <span id="coins" class="font-bold">0</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="relative w-full max-w-[400px]">
+        <canvas id="launchCanvas"></canvas>
+
+        <div id="launch-ui" class="absolute inset-0 flex items-center justify-center">
+            <div class="flex flex-col items-center">
+                <div class="w-8 h-48 glass rounded-full overflow-hidden relative mb-6">
+                    <div id="power-inner" class="absolute bottom-0 w-full power-bar-inner" style="height: 0%"></div>
+                </div>
+                <button onclick="launch()" class="bg-cyan-500 text-slate-950 px-10 py-4 rounded-2xl font-black shadow-lg shadow-cyan-500/30 active:scale-95 transition-all uppercase">LANCER !</button>
+            </div>
+        </div>
+
+        <div id="shop-ui" class="absolute inset-0 bg-slate-950/90 backdrop-blur-xl rounded-[1.5rem] hidden flex flex-col items-center justify-center p-6 z-50">
+            <h2 class="text-2xl font-black mb-1 text-cyan-400 uppercase">Vol terminé !</h2>
+            <p id="dist-res" class="text-3xl font-bold mb-6 text-white">0 m</p>
+            
+            <div class="w-full space-y-3 mb-8">
+                <button onclick="buyUpgrade('power')" class="w-full glass p-4 rounded-2xl flex justify-between items-center group active:scale-95 transition-all">
+                    <div class="text-left">
+                        <span class="block text-[10px] text-slate-500 uppercase font-bold tracking-widest">Puissance</span>
+                        <span id="pwr-lvl" class="text-sm font-bold">Niv. 1</span>
+                    </div>
+                    <span id="pwr-cost" class="bg-yellow-500/20 text-yellow-400 px-3 py-1 rounded-lg text-xs font-bold">50 🪙</span>
+                </button>
+                <button onclick="buyUpgrade('aero')" class="w-full glass p-4 rounded-2xl flex justify-between items-center group active:scale-95 transition-all">
+                    <div class="text-left">
+                        <span class="block text-[10px] text-slate-500 uppercase font-bold tracking-widest">Aérodynamisme</span>
+                        <span id="aero-lvl" class="text-sm font-bold">Niv. 1</span>
+                    </div>
+                    <span id="aero-cost" class="bg-yellow-500/20 text-yellow-400 px-3 py-1 rounded-lg text-xs font-bold">75 🪙</span>
+                </button>
+            </div>
+
+            <button onclick="resetToLaunch()" class="text-cyan-400 font-bold uppercase tracking-widest text-xs border-b border-cyan-400/30 pb-1">Retenter l'aventure</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('launchCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        canvas.width = 400; canvas.height = 300;
+
+        let gameState = 'IDLE'; // IDLE, LAUNCHING, FLYING, SHOP
+        let coins = 0;
+        let distance = 0;
+        let powerMeter = 0;
+        let powerDir = 1;
+        let speed = 0;
+        
+        // Upgrades
+        let stats = {
+            power: { lvl: 1, cost: 50, val: 15 },
+            aero: { lvl: 1, cost: 75, val: 0.985 } // Friction
+        };
+
+        let cube = { x: 50, y: 220, w: 30, h: 30 };
+        let stars = [];
+
+        // Init étoiles pour le décor
+        for(let i=0; i<50; i++) stars.push({x: Math.random()*canvas.width, y: Math.random()*canvas.height, s: Math.random()*2});
+
+        function updateUI() {
+            document.getElementById('coins').innerText = Math.floor(coins);
+            document.getElementById('pwr-lvl').innerText = "Niv. " + stats.power.lvl;
+            document.getElementById('pwr-cost').innerText = stats.power.cost + " 🪙";
+            document.getElementById('aero-lvl').innerText = "Niv. " + stats.aero.lvl;
+            document.getElementById('aero-cost').innerText = stats.aero.cost + " 🪙";
+        }
+
+        function launch() {
+            if(gameState !== 'IDLE') return;
+            speed = (powerMeter / 100) * stats.power.val;
+            gameState = 'FLYING';
+            document.getElementById('launch-ui').classList.add('hidden');
+        }
+
+        function resetToLaunch() {
+            gameState = 'IDLE';
+            distance = 0;
+            speed = 0;
+            cube.x = 50;
+            document.getElementById('launch-ui').classList.remove('hidden');
+            document.getElementById('shop-ui').classList.add('hidden');
+        }
+
+        function buyUpgrade(type) {
+            let u = stats[type];
+            if(coins >= u.cost) {
+                coins -= u.cost;
+                u.lvl++;
+                if(type === 'power') { u.val += 3; u.cost = Math.floor(u.cost * 1.6); }
+                else { u.val += 0.002; u.cost = Math.floor(u.cost * 1.8); }
+                updateUI();
+                if (navigator.vibrate) navigator.vibrate(20);
+            }
+        }
+
+        function gameLoop() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Gestion du Power Meter (Phase IDLE)
+            if(gameState === 'IDLE') {
+                powerMeter += 3 * powerDir;
+                if(powerMeter >= 100 || powerMeter <= 0) powerDir *= -1;
+                document.getElementById('power-inner').style.height = powerMeter + "%";
+            }
+
+            // Décor (Étoiles qui bougent selon la vitesse)
+            ctx.fillStyle = "#fff";
+            stars.forEach(s => {
+                if(gameState === 'FLYING') s.x -= speed * 0.5;
+                if(s.x < 0) s.x = canvas.width;
+                ctx.fillRect(s.x, s.y, s.s, s.s);
+            });
+
+            // Sol
+            ctx.fillStyle = "rgba(34, 211, 238, 0.2)";
+            ctx.fillRect(0, 250, canvas.width, 50);
+
+            // Physique du vol
+            if(gameState === 'FLYING') {
+                speed *= stats.aero.val; // Friction
+                distance += speed;
+                
+                if(speed < 0.1) {
+                    speed = 0;
+                    gameState = 'SHOP';
+                    let reward = Math.floor(distance / 10);
+                    coins += reward;
+                    document.getElementById('dist-res').innerText = Math.floor(distance) + " m";
+                    document.getElementById('shop-ui').classList.remove('hidden');
+                    updateUI();
+                }
+            }
+
+            // Dessin Cube
+            ctx.save();
+            ctx.translate(cube.x, cube.y);
+            if(gameState === 'FLYING') ctx.rotate(distance * 0.05); // Rotation pendant le vol
+            ctx.fillStyle = "#22d3ee";
+            ctx.shadowBlur = 15; ctx.shadowColor = "#22d3ee";
+            ctx.fillRect(-cube.w/2, -cube.h/2, cube.w, cube.h);
+            ctx.restore();
+
+            // HUD Distance (pendant le vol)
+            if(gameState === 'FLYING') {
+                ctx.fillStyle = "#fff";
+                ctx.font = "bold 20px Outfit";
+                ctx.textAlign = "center";
+                ctx.fillText(Math.floor(distance) + " m", canvas.width/2, 50);
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        updateUI();
+        gameLoop();
+    </script>
+</body>
+</html>

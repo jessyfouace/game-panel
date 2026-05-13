@@ -1,207 +1,125 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
-    <title>Neon Dash Hardcore ⚡</title>
+<script>
+    const canvas = document.getElementById('launchCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    canvas.width = 400; canvas.height = 300;
 
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    let gameState = 'IDLE'; 
+    let coins = 0;
+    let distance = 0;
+    let powerMeter = 0;
+    let powerDir = 1;
+    let speed = 0;
+    
+    // Upgrades équilibrés pour la vitesse
+    let stats = {
+        power: { lvl: 1, cost: 50, val: 25 }, // Augmenté de 15 à 25
+        aero: { lvl: 1, cost: 75, val: 0.975 } // Friction plus forte (0.985 -> 0.975) pour s'arrêter plus vite
+    };
 
-    <style>
-        body { font-family: 'Outfit', sans-serif; background: #020617; color: #f8fafc; touch-action: none; overflow: hidden; position: fixed; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; }
-        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
-        canvas { display: block; background: #010409; border-radius: 1rem; width: 100%; max-width: 400px; height: 55vh; border: 2px solid rgba(244, 63, 94, 0.3); }
-        .score-val { font-variant-numeric: tabular-nums; text-shadow: 0 0 12px rgba(34, 211, 238, 0.8); }
-    </style>
-</head>
-<body class="py-6 px-4">
+    let cube = { x: 50, y: 220, w: 30, h: 30 };
+    let stars = [];
 
-    <div class="w-full max-w-md flex items-center justify-between mb-4">
-        <a href="index.html" class="w-10 h-10 glass rounded-xl flex items-center justify-center text-slate-400"><i class="fa-solid fa-arrow-left"></i></a>
-        <div class="glass px-5 py-2 rounded-xl border border-cyan-500/30">
-            <span id="score" class="score-val font-black text-3xl text-cyan-400">0</span>
-        </div>
-    </div>
+    for(let i=0; i<50; i++) stars.push({x: Math.random()*canvas.width, y: Math.random()*canvas.height, s: Math.random()*2});
 
-    <div class="relative w-full max-w-[400px]">
-        <canvas id="dashCanvas"></canvas>
-        <div id="overlay" class="absolute inset-0 bg-slate-950/95 backdrop-blur-xl rounded-[1rem] flex flex-col items-center justify-center text-center p-6 z-50">
-            <h2 class="text-3xl font-black mb-2 text-rose-500 italic uppercase tracking-tighter">Hardcore Dash</h2>
-            <p class="text-slate-400 mb-8 text-xs uppercase tracking-widest">Escaliers • Pics • Vitesse instable</p>
-            <button onclick="startGame()" class="bg-rose-500 text-white px-14 py-4 rounded-2xl font-black shadow-lg shadow-rose-500/30 active:scale-95 transition-all uppercase italic">Démarrer</button>
-        </div>
-    </div>
+    function updateUI() {
+        document.getElementById('coins').innerText = Math.floor(coins);
+        document.getElementById('pwr-lvl').innerText = "Niv. " + stats.power.lvl;
+        document.getElementById('pwr-cost').innerText = stats.power.cost + " 🪙";
+        document.getElementById('aero-lvl').innerText = "Niv. " + stats.aero.lvl;
+        document.getElementById('aero-cost').innerText = stats.aero.cost + " 🪙";
+    }
 
-    <script>
-        const canvas = document.getElementById('dashCanvas');
-        const ctx = canvas.getContext('2d');
-        const overlay = document.getElementById('overlay');
-        
-        canvas.width = 400; canvas.height = 350; 
+    function launch() {
+        if(gameState !== 'IDLE') return;
+        // On booste le calcul de la vitesse initiale
+        speed = (powerMeter / 100) * stats.power.val;
+        gameState = 'FLYING';
+        document.getElementById('launch-ui').classList.add('hidden');
+    }
 
-        let gameActive = false, score = 0, speed = 5.5, frameCount = 0;
-        let lastPortalTime = 0, scoreInterval;
-        
-        let floorHeight = 310, roofHeight = 40;
-        let targetFloor = 310, targetRoof = 40;
+    function resetToLaunch() {
+        gameState = 'IDLE';
+        distance = 0;
+        speed = 0;
+        document.getElementById('launch-ui').classList.remove('hidden');
+        document.getElementById('shop-ui').classList.add('hidden');
+    }
 
-        let player = { 
-            x: 60, y: 0, w: 20, h: 20, dy: 0, 
-            jump: 7.2, gravity: 0.52, inverted: false, 
-            jumpsDone: 0 
-        };
-        let obstacles = [];
+    function buyUpgrade(type) {
+        let u = stats[type];
+        if(coins >= u.cost) {
+            coins -= u.cost;
+            u.lvl++;
+            if(type === 'power') { u.val += 5; u.cost = Math.floor(u.cost * 1.5); }
+            else { u.val += 0.001; u.cost = Math.floor(u.cost * 1.7); }
+            updateUI();
+            if (navigator.vibrate) navigator.vibrate(20);
+        }
+    }
 
-        function startGame() {
-            gameActive = true; score = 0; speed = 5.5; obstacles = []; 
-            player.inverted = false; player.dy = 0; player.jumpsDone = 0;
-            floorHeight = 310; roofHeight = 40;
-            overlay.classList.add('hidden');
+    function gameLoop() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        if(gameState === 'IDLE') {
+            powerMeter += 4 * powerDir; // Jauge un peu plus rapide
+            if(powerMeter >= 100 || powerMeter <= 0) powerDir *= -1;
+            document.getElementById('power-inner').style.height = powerMeter + "%";
+        }
+
+        // Background - Les étoiles filent plus vite
+        ctx.fillStyle = "#fff";
+        stars.forEach(s => {
+            if(gameState === 'FLYING') s.x -= speed * 1.2; // Multiplicateur de sensation de vitesse
+            if(s.x < 0) s.x = canvas.width;
+            ctx.fillRect(s.x, s.y, s.s, s.s);
+        });
+
+        // Sol dynamique
+        ctx.fillStyle = "rgba(34, 211, 238, 0.2)";
+        ctx.fillRect(0, 250, canvas.width, 50);
+
+        if(gameState === 'FLYING') {
+            speed *= stats.aero.val; 
+            distance += speed * 2; // On double la progression de distance pour que le score grimpe vite
             
-            if(scoreInterval) clearInterval(scoreInterval);
-            scoreInterval = setInterval(() => { if(gameActive) { score += 1; document.getElementById('score').innerText = score; } }, 100);
-
-            requestAnimationFrame(gameLoop);
-        }
-
-        function spawn() {
-            let now = Date.now();
-            let rand = Math.random();
-            
-            // Changement d'étage brutal
-            if (frameCount % 150 === 0) {
-                targetFloor = 250 + Math.random() * 60;
-                targetRoof = 20 + Math.random() * 60;
-            }
-
-            // Génération Escalier
-            if (rand < 0.15 && frameCount % 100 === 0) {
-                let steps = 3;
-                let startY = player.inverted ? roofHeight : floorHeight - 20;
-                for(let i=0; i<steps; i++) {
-                    obstacles.push({
-                        x: canvas.width + (i * 20),
-                        y: player.inverted ? startY + (i*20) : startY - (i*20),
-                        w: 22, h: 22, type: 'block'
-                    });
-                }
-                return;
-            }
-
-            // Pics en rafale
-            if (rand < 0.4) { 
-                let groupSize = Math.floor(Math.random() * 3) + 1;
-                for(let i=0; i<groupSize; i++) {
-                    obstacles.push({
-                        x: canvas.width + (i * 22),
-                        w: 20, h: 20, type: 'spike',
-                        inverted: player.inverted,
-                        y: player.inverted ? roofHeight : floorHeight - 20
-                    });
-                }
-            } 
-            // Portails
-            else if (rand < 0.55 && (now - lastPortalTime > 4000)) { 
-                obstacles.push({
-                    x: canvas.width, type: player.inverted ? 'p_down' : 'p_up',
-                    y: roofHeight, h: floorHeight - roofHeight, w: 20
-                });
-                lastPortalTime = now;
+            // On arrête le cube dès qu'il devient trop lent (0.5 au lieu de 0.1)
+            if(speed < 0.5) {
+                speed = 0;
+                gameState = 'SHOP';
+                let reward = Math.floor(distance / 5); // Plus généreux en pièces
+                coins += reward;
+                document.getElementById('dist-res').innerText = Math.floor(distance) + " m";
+                document.getElementById('shop-ui').classList.remove('hidden');
+                updateUI();
             }
         }
 
-        function gameLoop() {
-            if (!gameActive) return;
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            frameCount++;
+        // Dessin Cube avec effet de trainée si rapide
+        ctx.save();
+        ctx.translate(cube.x, cube.y);
+        if(gameState === 'FLYING') {
+            ctx.rotate(distance * 0.1);
+            // Effet visuel de vitesse (étirement)
+            let stretch = 1 + (speed / 50);
+            ctx.scale(stretch, 1 / stretch);
+        }
+        ctx.fillStyle = "#22d3ee";
+        ctx.shadowBlur = speed > 10 ? 20 : 10; 
+        ctx.shadowColor = "#22d3ee";
+        ctx.fillRect(-cube.w/2, -cube.h/2, cube.w, cube.h);
+        ctx.restore();
 
-            floorHeight += (targetFloor - floorHeight) * 0.08;
-            roofHeight += (targetRoof - roofHeight) * 0.08;
-
-            // Terrain
-            ctx.fillStyle = "rgba(244, 63, 94, 0.2)";
-            ctx.fillRect(0, 0, canvas.width, roofHeight);
-            ctx.fillRect(0, floorHeight, canvas.width, canvas.height - floorHeight);
-
-            player.dy += player.inverted ? -player.gravity : player.gravity;
-            player.y += player.dy;
-
-            // Collision Terrain
-            if (player.y <= roofHeight) { player.y = roofHeight; player.dy = 0; player.jumpsDone = 0; }
-            if (player.y + player.h >= floorHeight) { player.y = floorHeight - player.h; player.dy = 0; player.jumpsDone = 0; }
-
-            // Spawn plus fréquent avec la vitesse
-            if (frameCount % Math.max(20, Math.floor(50 - speed)) === 0) spawn();
-
-            obstacles.forEach((obs, i) => {
-                obs.x -= speed;
-                
-                if (obs.type === 'spike') {
-                    ctx.fillStyle = "#f43f5e";
-                    ctx.beginPath();
-                    if (!obs.inverted) { ctx.moveTo(obs.x, obs.y + 20); ctx.lineTo(obs.x + 10, obs.y); ctx.lineTo(obs.x + 20, obs.y + 20); }
-                    else { ctx.moveTo(obs.x, obs.y); ctx.lineTo(obs.x + 10, obs.y + 20); ctx.lineTo(obs.x + 20, obs.y); }
-                    ctx.fill();
-                } else if (obs.type === 'block') {
-                    ctx.fillStyle = "#1e293b";
-                    ctx.strokeStyle = "#22d3ee";
-                    ctx.lineWidth = 2;
-                    ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
-                    ctx.strokeRect(obs.x, obs.y, obs.w, obs.h);
-                } else if (obs.type.startsWith('p_')) {
-                    ctx.fillStyle = obs.type === 'p_up' ? "#a855f7" : "#3b82f6";
-                    ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
-                }
-
-                // Collisions complexes
-                if (player.x < obs.x + obs.w && player.x + player.w > obs.x && player.y < obs.y + obs.h && player.y + player.h > obs.y) {
-                    if (obs.type === 'spike') gameOver();
-                    else if (obs.type === 'p_up') { player.inverted = true; lastPortalTime = Date.now(); }
-                    else if (obs.type === 'p_down') { player.inverted = false; lastPortalTime = Date.now(); }
-                    else if (obs.type === 'block') {
-                        // Collision par le dessus ou le dessous (on pose le pied)
-                        if (player.dy > 0 && player.y + player.h < obs.y + 10 && !player.inverted) {
-                            player.y = obs.y - player.h; player.dy = 0; player.jumpsDone = 0;
-                        } else if (player.dy < 0 && player.y > obs.y + obs.h - 10 && player.inverted) {
-                            player.y = obs.y + obs.h; player.dy = 0; player.jumpsDone = 0;
-                        } else {
-                            gameOver(); // Collision latérale = Mort
-                        }
-                    }
-                }
-            });
-
-            obstacles = obstacles.filter(o => o.x > -100);
-            speed += 0.002; // Accélération plus rapide
-
-            // Joueur
-            ctx.fillStyle = "#22d3ee";
-            ctx.shadowBlur = 15; ctx.shadowColor = "#22d3ee";
-            ctx.fillRect(player.x, player.y, player.w, player.h);
-            ctx.shadowBlur = 0;
-
-            requestAnimationFrame(gameLoop);
+        if(gameState === 'FLYING') {
+            ctx.fillStyle = "#fff";
+            ctx.font = "900 24px Outfit";
+            ctx.textAlign = "center";
+            ctx.fillText(Math.floor(distance) + " m", canvas.width/2, 60);
         }
 
-        function gameOver() {
-            gameActive = false;
-            clearInterval(scoreInterval);
-            if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-            overlay.classList.remove('hidden');
-        }
+        requestAnimationFrame(gameLoop);
+    }
 
-        function jumpAction() {
-            if (gameActive && player.jumpsDone < 2) {
-                player.dy = player.inverted ? player.jump : -player.jump;
-                player.jumpsDone++;
-            }
-        }
-
-        window.addEventListener('touchstart', (e) => { if(e.target.tagName !== 'BUTTON') { e.preventDefault(); jumpAction(); } }, {passive: false});
-        window.addEventListener('mousedown', (e) => { if(e.target.tagName !== 'BUTTON') jumpAction(); });
-        window.addEventListener('keydown', (e) => { if(e.code === 'Space') jumpAction(); });
-    </script>
-</body>
-</html>
+    updateUI();
+    gameLoop();
+</script>
