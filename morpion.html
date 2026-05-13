@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+    <title>Morpion - Arcade ❌</title>
+
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="icon.png">
+    <link rel="icon" type="image/png" href="icon.png">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: #0f172a;
+            color: #f8fafc;
+            touch-action: manipulation;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .glass {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .cell {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            border-radius: 1.5rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.2s ease;
+        }
+        .cell.active:active { transform: scale(0.9); }
+        .cell.winner {
+            background: rgba(16, 185, 129, 0.2);
+            border-color: #10b981;
+            color: #10b981;
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
+        }
+        .x-player { color: #f43f5e; } /* Rouge/Rose */
+        .o-player { color: #10b981; } /* Emeraude */
+    </style>
+</head>
+<body class="py-8 px-4">
+
+    <div class="w-full max-w-md flex items-center justify-between mb-8">
+        <a href="index.html" class="w-12 h-12 glass rounded-2xl flex items-center justify-center text-slate-400 active:scale-90 transition-transform">
+            <i class="fa-solid fa-arrow-left"></i>
+        </a>
+        <div class="glass px-6 py-2 rounded-2xl flex flex-col items-center">
+            <span class="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Tour de</span>
+            <span id="turn-display" class="font-bold text-lg x-player uppercase">Joueur X</span>
+        </div>
+        <button onclick="resetGame()" class="w-12 h-12 glass rounded-2xl flex items-center justify-center text-emerald-400">
+            <i class="fa-solid fa-rotate-right"></i>
+        </button>
+    </div>
+
+    <div class="w-full max-w-[350px] glass p-4 rounded-[2.5rem]">
+        <div id="board" class="grid grid-cols-3 gap-4">
+            <div class="cell active" onclick="makeMove(0)"></div>
+            <div class="cell active" onclick="makeMove(1)"></div>
+            <div class="cell active" onclick="makeMove(2)"></div>
+            <div class="cell active" onclick="makeMove(3)"></div>
+            <div class="cell active" onclick="makeMove(4)"></div>
+            <div class="cell active" onclick="makeMove(5)"></div>
+            <div class="cell active" onclick="makeMove(6)"></div>
+            <div class="cell active" onclick="makeMove(7)"></div>
+            <div class="cell active" onclick="makeMove(8)"></div>
+        </div>
+    </div>
+
+    <div class="mt-8 flex bg-slate-900/50 p-1 rounded-2xl border border-white/5">
+        <button id="mode-pve" onclick="setMode('pve')" class="px-6 py-2 rounded-xl font-bold transition-all bg-emerald-500 text-slate-950">VS IA</button>
+        <button id="mode-pvp" onclick="setMode('pvp')" class="px-6 py-2 rounded-xl font-bold transition-all text-slate-400">2 Joueurs</button>
+    </div>
+
+    <div id="end-screen" class="hidden fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex flex-col items-center justify-center p-6 text-center">
+        <h2 id="result-text" class="text-5xl font-bold text-white mb-8">Match Nul !</h2>
+        <button onclick="resetGame()" class="w-full max-w-xs bg-emerald-500 text-slate-950 py-4 rounded-2xl font-bold shadow-lg shadow-emerald-500/20 active:scale-95 transition-transform">
+            Rejouer
+        </button>
+    </div>
+
+    <script>
+        let board = ["", "", "", "", "", "", "", "", ""];
+        let currentPlayer = "X";
+        let gameActive = true;
+        let mode = 'pve'; // pve ou pvp
+
+        const winConditions = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8], // Lignes
+            [0, 3, 6], [1, 4, 7], [2, 5, 8], // Colonnes
+            [0, 4, 8], [2, 4, 6]             // Diagonales
+        ];
+
+        function setMode(newMode) {
+            mode = newMode;
+            document.getElementById('mode-pve').className = mode === 'pve' ? 'px-6 py-2 rounded-xl font-bold bg-emerald-500 text-slate-950' : 'px-6 py-2 rounded-xl font-bold text-slate-400';
+            document.getElementById('mode-pvp').className = mode === 'pvp' ? 'px-6 py-2 rounded-xl font-bold bg-emerald-500 text-slate-950' : 'px-6 py-2 rounded-xl font-bold text-slate-400';
+            resetGame();
+        }
+
+        function makeMove(index) {
+            if (board[index] !== "" || !gameActive) return;
+
+            board[index] = currentPlayer;
+            updateUI();
+            if (navigator.vibrate) navigator.vibrate(10);
+
+            if (checkWin(currentPlayer)) {
+                endGame(currentPlayer);
+            } else if (board.every(cell => cell !== "")) {
+                endGame("draw");
+            } else {
+                currentPlayer = currentPlayer === "X" ? "O" : "X";
+                updateTurnDisplay();
+                
+                if (mode === 'pve' && currentPlayer === "O") {
+                    gameActive = false; // Bloque le joueur pendant que l'IA réfléchit
+                    setTimeout(aiMove, 400);
+                }
+            }
+        }
+
+        function aiMove() {
+            let bestMove = minimax(board, "O").index;
+            board[bestMove] = "O";
+            gameActive = true;
+            updateUI();
+            
+            if (checkWin("O")) {
+                endGame("O");
+            } else if (board.every(cell => cell !== "")) {
+                endGame("draw");
+            } else {
+                currentPlayer = "X";
+                updateTurnDisplay();
+            }
+        }
+
+        function minimax(newBoard, player) {
+            let availSpots = newBoard.map((v, i) => v === "" ? i : null).filter(v => v !== null);
+
+            if (checkWin("X", newBoard)) return {score: -10};
+            if (checkWin("O", newBoard)) return {score: 10};
+            if (availSpots.length === 0) return {score: 0};
+
+            let moves = [];
+            for (let i = 0; i < availSpots.length; i++) {
+                let move = {};
+                move.index = availSpots[i];
+                newBoard[availSpots[i]] = player;
+
+                if (player === "O") {
+                    move.score = minimax(newBoard, "X").score;
+                } else {
+                    move.score = minimax(newBoard, "O").score;
+                }
+
+                newBoard[availSpots[i]] = "";
+                moves.push(move);
+            }
+
+            let bestMove;
+            if (player === "O") {
+                let bestScore = -10000;
+                for (let i = 0; i < moves.length; i++) {
+                    if (moves[i].score > bestScore) {
+                        bestScore = moves[i].score;
+                        bestMove = i;
+                    }
+                }
+            } else {
+                let bestScore = 10000;
+                for (let i = 0; i < moves.length; i++) {
+                    if (moves[i].score < bestScore) {
+                        bestScore = moves[i].score;
+                        bestMove = i;
+                    }
+                }
+            }
+            return moves[bestMove];
+        }
+
+        function checkWin(player, currentBoard = board) {
+            return winConditions.some(condition => {
+                return condition.every(index => currentBoard[index] === player);
+            });
+        }
+
+        function updateUI() {
+            const cells = document.querySelectorAll('.cell');
+            board.forEach((val, i) => {
+                cells[i].innerText = val;
+                cells[i].className = `cell ${val === "X" ? 'x-player' : 'o-player'}`;
+                if (val === "") cells[i].classList.add('active');
+            });
+        }
+
+        function updateTurnDisplay() {
+            const display = document.getElementById('turn-display');
+            display.innerText = `Joueur ${currentPlayer}`;
+            display.className = `font-bold text-lg uppercase ${currentPlayer === "X" ? 'x-player' : 'o-player'}`;
+        }
+
+        function endGame(result) {
+            gameActive = false;
+            const screen = document.getElementById('end-screen');
+            const text = document.getElementById('result-text');
+            
+            if (result === "draw") {
+                text.innerText = "Match Nul !";
+                text.className = "text-5xl font-bold text-slate-400 mb-8";
+            } else {
+                text.innerText = `${result} a Gagné !`;
+                text.className = `text-5xl font-bold mb-8 ${result === "X" ? 'x-player' : 'o-player'}`;
+                highlightWinner(result);
+            }
+            
+            setTimeout(() => screen.classList.remove('hidden'), 800);
+            if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+        }
+
+        function highlightWinner(player) {
+            winConditions.forEach(condition => {
+                if (condition.every(index => board[index] === player)) {
+                    condition.forEach(index => {
+                        document.querySelectorAll('.cell')[index].classList.add('winner');
+                    });
+                }
+            });
+        }
+
+        function resetGame() {
+            board = ["", "", "", "", "", "", "", "", ""];
+            currentPlayer = "X";
+            gameActive = true;
+            document.getElementById('end-screen').classList.add('hidden');
+            document.querySelectorAll('.cell').forEach(c => {
+                c.innerText = "";
+                c.className = "cell active";
+            });
+            updateTurnDisplay();
+        }
+
+        updateTurnDisplay();
+    </script>
+</body>
+</html>

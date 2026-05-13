@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+    <title>S-F-M Strike - Arcade ⚔️</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'Outfit', sans-serif; background: #0f172a; color: #f8fafc; overflow: hidden; height: 100vh; position: fixed; width: 100%; }
+        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        
+        .hp-bar { transition: width 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        
+        /* Animations de combat */
+        @keyframes attack-left { 0% { transform: translateX(0); } 50% { transform: translateX(50px) scale(1.1); } 100% { transform: translateX(0); } }
+        @keyframes attack-right { 0% { transform: translateX(0); } 50% { transform: translateX(-50px) scale(1.1); } 100% { transform: translateX(0); } }
+        @keyframes shake { 0%, 100% { transform: translate(0,0); } 25% { transform: translate(5px, 5px); } 50% { transform: translate(-5px, -5px); } 75% { transform: translate(5px, -5px); } }
+        
+        .animate-attack-l { animation: attack-left 0.4s ease-in-out; }
+        .animate-attack-r { animation: attack-right 0.4s ease-in-out; }
+        .shake-screen { animation: shake 0.2s ease-in-out 2; }
+
+        .choice-btn {
+            width: 80px; height: 80px; border-radius: 1.5rem; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; transition: all 0.2s;
+        }
+        .choice-btn:active { transform: scale(0.9); }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-between py-8">
+
+    <div class="w-full max-w-md px-6 flex items-center justify-between">
+        <a href="index.html" class="w-12 h-12 glass rounded-2xl flex items-center justify-center text-slate-400">
+            <i class="fa-solid fa-arrow-left"></i>
+        </a>
+        <div class="glass px-4 py-2 rounded-2xl text-xs font-bold uppercase tracking-widest text-indigo-400">Battle Mode</div>
+        <button onclick="resetGame()" class="w-12 h-12 glass rounded-2xl flex items-center justify-center text-indigo-400">
+            <i class="fa-solid fa-rotate-right"></i>
+        </button>
+    </div>
+
+    <div id="arena" class="w-full max-w-md px-4 flex flex-col gap-8 mt-4">
+        <div class="flex flex-col gap-2">
+            <div class="flex justify-between items-end mb-1">
+                <span class="font-bold text-sm">JOUEUR 1</span>
+                <span id="hp-text-1" class="text-xs font-mono">100/100</span>
+            </div>
+            <div class="w-full h-4 bg-slate-800 rounded-full overflow-hidden border border-white/10">
+                <div id="hp-1" class="hp-bar h-full bg-gradient-to-r from-emerald-500 to-teal-400 w-full"></div>
+            </div>
+            <div id="char-1" class="text-5xl mt-2 transition-all duration-300">👤</div>
+        </div>
+
+        <div id="vs-label" class="text-center font-black italic text-slate-700 text-4xl">VS</div>
+
+        <div class="flex flex-col gap-2">
+            <div id="char-2" class="text-5xl mb-2 text-right transition-all duration-300">🤖</div>
+            <div class="w-full h-4 bg-slate-800 rounded-full overflow-hidden border border-white/10">
+                <div id="hp-2" class="hp-bar h-full bg-gradient-to-r from-emerald-500 to-teal-400 w-full"></div>
+            </div>
+            <div class="flex justify-between items-start mt-1">
+                <span id="hp-text-2" class="text-xs font-mono">100/100</span>
+                <span id="p2-name" class="font-bold text-sm uppercase">CPU ALPHA</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="w-full max-w-md px-6 pb-4">
+        <div id="status-text" class="text-center mb-6 font-bold text-indigo-300 h-6">Choisissez votre arme</div>
+        
+        <div class="flex justify-around gap-4">
+            <button onclick="play('pierre')" class="choice-btn glass border-blue-500/30 text-blue-400">
+                <i class="fa-solid fa-hand-fist"></i>
+            </button>
+            <button onclick="play('feuille')" class="choice-btn glass border-emerald-500/30 text-emerald-400">
+                <i class="fa-solid fa-hand"></i>
+            </button>
+            <button onclick="play('ciseaux')" class="choice-btn glass border-pink-500/30 text-pink-400">
+                <i class="fa-solid fa-hand-scissors"></i>
+            </button>
+        </div>
+
+        <div class="mt-8 flex bg-slate-900/50 p-1 rounded-2xl border border-white/5">
+            <button id="m-pve" onclick="setMode('pve')" class="flex-1 py-2 rounded-xl font-bold transition-all bg-indigo-500 text-white">VS IA</button>
+            <button id="m-pvp" onclick="setMode('pvp')" class="flex-1 py-2 rounded-xl font-bold transition-all text-slate-400">1 VS 1</button>
+        </div>
+    </div>
+
+    <div id="win-screen" class="hidden fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex flex-col items-center justify-center p-6 text-center">
+        <div id="winner-icon" class="text-7xl mb-4">🏆</div>
+        <h2 id="winner-name" class="text-3xl font-bold mb-8 uppercase">LE JOUEUR 1 GAGNE</h2>
+        <button onclick="resetGame()" class="w-full max-w-xs bg-indigo-500 text-white py-4 rounded-2xl font-bold shadow-lg active:scale-95 transition-all">REPRENDRE LE COMBAT</button>
+    </div>
+
+    <script>
+        let hp1 = 100, hp2 = 100;
+        let mode = 'pve';
+        let p1Choice = null;
+        let p2Choice = null;
+        let gameActive = true;
+
+        const rules = { pierre: 'ciseaux', feuille: 'pierre', ciseaux: 'feuille' };
+        const icons = { pierre: '👊', feuille: '✋', ciseaux: '✌️' };
+
+        function setMode(m) {
+            mode = m;
+            document.getElementById('p2-name').innerText = m === 'pve' ? 'CPU ALPHA' : 'JOUEUR 2';
+            document.getElementById('char-2').innerText = m === 'pve' ? '🤖' : '👤';
+            document.getElementById('m-pve').className = m === 'pve' ? 'flex-1 py-2 rounded-xl font-bold bg-indigo-500 text-white' : 'flex-1 py-2 rounded-xl font-bold text-slate-400';
+            document.getElementById('m-pvp').className = m === 'pvp' ? 'flex-1 py-2 rounded-xl font-bold bg-indigo-500 text-white' : 'flex-1 py-2 rounded-xl font-bold text-slate-400';
+            resetGame();
+        }
+
+        function play(choice) {
+            if (!gameActive) return;
+
+            if (mode === 'pve') {
+                p1Choice = choice;
+                const keys = Object.keys(rules);
+                p2Choice = keys[Math.floor(Math.random() * 3)];
+                resolveRound();
+            } else {
+                if (!p1Choice) {
+                    p1Choice = choice;
+                    document.getElementById('status-text').innerText = "JOUEUR 2 : À VOUS !";
+                    if (navigator.vibrate) navigator.vibrate(50);
+                } else {
+                    p2Choice = choice;
+                    resolveRound();
+                }
+            }
+        }
+
+        function resolveRound() {
+            const status = document.getElementById('status-text');
+            const char1 = document.getElementById('char-1');
+            const char2 = document.getElementById('char-2');
+
+            if (p1Choice === p2Choice) {
+                status.innerText = "ÉGALITÉ !";
+                char1.innerText = icons[p1Choice];
+                char2.innerText = icons[p2Choice];
+            } else if (rules[p1Choice] === p2Choice) {
+                // P1 Gagne
+                hp2 -= 20;
+                status.innerText = "JOUEUR 1 FRAPPE !";
+                char1.classList.add('animate-attack-l');
+                document.getElementById('arena').classList.add('shake-screen');
+                updateHP();
+            } else {
+                // P2 Gagne
+                hp1 -= 20;
+                status.innerText = mode === 'pve' ? "L'IA RÉPLIQUE !" : "JOUEUR 2 FRAPPE !";
+                char2.classList.add('animate-attack-r');
+                document.getElementById('arena').classList.add('shake-screen');
+                updateHP();
+            }
+
+            char1.innerText = icons[p1Choice];
+            char2.innerText = icons[p2Choice];
+
+            gameActive = false;
+            setTimeout(() => {
+                if (hp1 <= 0 || hp2 <= 0) {
+                    showWinner();
+                } else {
+                    p1Choice = null;
+                    p2Choice = null;
+                    char1.innerText = "👤";
+                    char2.innerText = mode === 'pve' ? '🤖' : '👤';
+                    char1.classList.remove('animate-attack-l');
+                    char2.classList.remove('animate-attack-r');
+                    document.getElementById('arena').classList.remove('shake-screen');
+                    status.innerText = "Choisissez votre arme";
+                    gameActive = true;
+                }
+            }, 800);
+        }
+
+        function updateHP() {
+            const bar1 = document.getElementById('hp-1');
+            const bar2 = document.getElementById('hp-2');
+            bar1.style.width = hp1 + '%';
+            bar2.style.width = hp2 + '%';
+            document.getElementById('hp-text-1').innerText = `${hp1}/100`;
+            document.getElementById('hp-text-2').innerText = `${hp2}/100`;
+
+            // Changement de couleur selon la vie
+            if (hp1 < 40) bar1.className = 'hp-bar h-full bg-red-500 w-full';
+            else if (hp1 < 70) bar1.className = 'hp-bar h-full bg-orange-500 w-full';
+            
+            if (hp2 < 40) bar2.className = 'hp-bar h-full bg-red-500 w-full';
+            else if (hp2 < 70) bar2.className = 'hp-bar h-full bg-orange-500 w-full';
+
+            if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+        }
+
+        function showWinner() {
+            const screen = document.getElementById('win-screen');
+            const name = document.getElementById('winner-name');
+            name.innerText = hp1 <= 0 ? (mode === 'pve' ? "L'IA A GAGNÉ" : "LE JOUEUR 2 GAGNE") : "LE JOUEUR 1 GAGNE";
+            document.getElementById('winner-icon').innerText = hp1 <= 0 ? "💀" : "🏆";
+            screen.classList.remove('hidden');
+        }
+
+        function resetGame() {
+            hp1 = 100; hp2 = 100;
+            p1Choice = null; p2Choice = null;
+            gameActive = true;
+            document.getElementById('hp-1').style.width = '100%';
+            document.getElementById('hp-2').style.width = '100%';
+            document.getElementById('hp-1').className = 'hp-bar h-full bg-gradient-to-r from-emerald-500 to-teal-400 w-full';
+            document.getElementById('hp-2').className = 'hp-bar h-full bg-gradient-to-r from-emerald-500 to-teal-400 w-full';
+            document.getElementById('hp-text-1').innerText = "100/100";
+            document.getElementById('hp-text-2').innerText = "100/100";
+            document.getElementById('status-text').innerText = "Choisissez votre arme";
+            document.getElementById('char-1').innerText = "👤";
+            document.getElementById('char-2').innerText = mode === 'pve' ? '🤖' : '👤';
+            document.getElementById('win-screen').classList.add('hidden');
+            document.getElementById('char-1').classList.remove('animate-attack-l');
+            document.getElementById('char-2').classList.remove('animate-attack-r');
+            document.getElementById('arena').classList.remove('shake-screen');
+        }
+    </script>
+</body>
+</html>

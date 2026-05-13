@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+    <title>Snake - Arcade 🐍</title>
+
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="icon.png">
+    <link rel="icon" type="image/png" href="icon.png">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: #0f172a;
+            color: #f8fafc;
+            touch-action: none; /* Empêche le scroll pendant le jeu */
+            overflow: hidden;
+        }
+        .glass {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        canvas {
+            image-rendering: pixelated;
+            border-radius: 1.5rem;
+            width: 100%;
+            max-width: 400px;
+            aspect-ratio: 1;
+        }
+        .ctrl-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            width: 70px;
+            height: 70px;
+            border-radius: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            active:scale-90;
+            transition: all 0.1s;
+        }
+        .ctrl-btn:active {
+            background: rgba(234, 179, 8, 0.2);
+            border-color: rgba(234, 179, 8, 0.5);
+            transform: scale(0.9);
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-between min-h-screen py-8 px-4">
+
+    <div class="w-full max-w-md flex items-center justify-between mb-4">
+        <a href="index.html" class="w-12 h-12 glass rounded-2xl flex items-center justify-center text-slate-400">
+            <i class="fa-solid fa-arrow-left"></i>
+        </a>
+        <div class="glass px-6 py-2 rounded-2xl flex items-center gap-3">
+            <i class="fa-solid fa-trophy text-yellow-500"></i>
+            <span id="score" class="font-bold text-xl">0</span>
+        </div>
+        <button onclick="resetGame()" class="w-12 h-12 glass rounded-2xl flex items-center justify-center text-yellow-500">
+            <i class="fa-solid fa-rotate-right"></i>
+        </button>
+    </div>
+
+    <div class="relative w-full max-w-[400px] glass p-2 rounded-[2rem]">
+        <canvas id="gameCanvas" width="400" height="400"></canvas>
+        
+        <div id="game-over" class="hidden absolute inset-0 bg-black/60 backdrop-blur-sm rounded-[2rem] flex flex-col items-center justify-center text-center p-6">
+            <h2 class="text-3xl font-bold text-white mb-2">Perdu ! 🍎</h2>
+            <p class="text-slate-300 mb-6">Le serpent s'est mordu.</p>
+            <button onclick="resetGame()" class="bg-yellow-500 text-black px-8 py-3 rounded-2xl font-bold shadow-lg shadow-yellow-500/20">Rejouer</button>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-3 gap-2 mt-8">
+        <div></div>
+        <button class="ctrl-btn" onclick="changeDirection('UP')"><i class="fa-solid fa-chevron-up text-yellow-500"></i></button>
+        <div></div>
+        
+        <button class="ctrl-btn" onclick="changeDirection('LEFT')"><i class="fa-solid fa-chevron-left text-yellow-500"></i></button>
+        <button class="ctrl-btn" onclick="changeDirection('DOWN')"><i class="fa-solid fa-chevron-down text-yellow-500"></i></button>
+        <button class="ctrl-btn" onclick="changeDirection('RIGHT')"><i class="fa-solid fa-chevron-right text-yellow-500"></i></button>
+    </div>
+
+    <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const scoreElement = document.getElementById('score');
+    const gameOverScreen = document.getElementById('game-over');
+
+    const box = 20; 
+    let snake, food, score, direction, game;
+    let gameStarted = false; // Nouvelle variable pour bloquer le mouvement au départ
+
+    function init() {
+        // Position de départ au centre
+        snake = [{ x: 9 * box, y: 10 * box }];
+        generateFood();
+        score = 0;
+        direction = null;
+        gameStarted = false; 
+        scoreElement.innerText = score;
+        gameOverScreen.classList.add('hidden');
+        
+        if (game) clearInterval(game);
+        game = setInterval(draw, 120); 
+        draw(); // Dessiner une première fois pour voir le serpent à l'arrêt
+    }
+
+    function generateFood() {
+        food = {
+            x: Math.floor(Math.random() * 19 + 1) * box,
+            y: Math.floor(Math.random() * 19 + 1) * box
+        };
+        // Empêcher la nourriture d'apparaître sur le serpent
+        for (let cell of snake) {
+            if (cell.x === food.x && cell.y === food.y) return generateFood();
+        }
+    }
+
+    function changeDirection(dir) {
+        if (!gameStarted) gameStarted = true; // Démarre le mouvement au premier clic
+
+        if (dir === 'LEFT' && direction !== 'RIGHT') direction = 'LEFT';
+        if (dir === 'UP' && direction !== 'DOWN') direction = 'UP';
+        if (dir === 'RIGHT' && direction !== 'LEFT') direction = 'RIGHT';
+        if (dir === 'DOWN' && direction !== 'UP') direction = 'DOWN';
+        
+        if (navigator.vibrate) navigator.vibrate(10);
+    }
+
+    function collision(head, array) {
+        for (let i = 0; i < array.length; i++) {
+            if (head.x === array[i].x && head.y === array[i].y) return true;
+        }
+        return false;
+    }
+
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Dessiner la nourriture
+        ctx.fillStyle = "#ef4444";
+        ctx.beginPath();
+        ctx.arc(food.x + box/2, food.y + box/2, box/2 - 2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Dessiner le serpent
+        for (let i = 0; i < snake.length; i++) {
+            ctx.fillStyle = i === 0 ? "#eab308" : "#a16207";
+            ctx.beginPath();
+            ctx.roundRect(snake[i].x, snake[i].y, box-2, box-2, 5);
+            ctx.fill();
+        }
+
+        // Si le jeu n'a pas commencé, on s'arrête là (pas de mouvement)
+        if (!gameStarted) return;
+
+        let snakeX = snake[0].x;
+        let snakeY = snake[0].y;
+
+        if (direction === "LEFT") snakeX -= box;
+        if (direction === "UP") snakeY -= box;
+        if (direction === "RIGHT") snakeX += box;
+        if (direction === "DOWN") snakeY += box;
+
+        if (snakeX === food.x && snakeY === food.y) {
+            score++;
+            scoreElement.innerText = score;
+            if (navigator.vibrate) navigator.vibrate(20);
+            generateFood();
+        } else {
+            snake.pop();
+        }
+
+        let newHead = { x: snakeX, y: snakeY };
+
+        // Game Over conditions
+        if (snakeX < 0 || snakeX >= canvas.width || snakeY < 0 || snakeY >= canvas.height || collision(newHead, snake)) {
+            clearInterval(game);
+            gameOverScreen.classList.remove('hidden');
+            if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+            return;
+        }
+
+        snake.unshift(newHead);
+    }
+
+    function resetGame() {
+        init();
+    }
+
+    document.addEventListener("keydown", event => {
+        const key = event.keyCode;
+        if (key === 37) changeDirection('LEFT');
+        if (key === 38) changeDirection('UP');
+        if (key === 39) changeDirection('RIGHT');
+        if (key === 40) changeDirection('DOWN');
+    });
+
+    init();
+</script>
+</body>
+</html>
