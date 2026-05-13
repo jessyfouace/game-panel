@@ -93,6 +93,10 @@
         let lives = 3;
         let gameActive = false;
 
+        // Paramètres de vitesse
+        const maxSpeed = 8; // La vitesse "max" pour pas que ce soit une fusée
+        const speedIncrement = 0.2; // Ce qu'on ajoute à chaque rebond
+
         const ballRadius = 8;
         let x, y, dx, dy;
         
@@ -123,7 +127,7 @@
             x = canvas.width / 2;
             y = canvas.height - 30;
             dx = 3.5;
-            dy = -3.5;
+            dy = -3.5; // Retour à la vitesse initiale
             paddleX = (canvas.width - paddleWidth) / 2;
         }
 
@@ -227,9 +231,15 @@
                 dy = -dy;
             } else if(y + dy > canvas.height - ballRadius - 10) {
                 if(x > paddleX && x < paddleX + paddleWidth) {
-                    dy = -dy;
-                    // Ajouter un peu d'effet selon où on touche le paddle
+                    if (Math.abs(dy) < maxSpeed) {
+                        dy = dy > 0 ? dy + speedIncrement : dy - speedIncrement;
+                    }
+                    
+                    dy = -dy; // Rebond
+                    
+                    // Effet selon l'endroit où on touche le paddle
                     dx = 8 * ((x - (paddleX + paddleWidth / 2)) / paddleWidth);
+                    if (navigator.vibrate) navigator.vibrate(10);
                 } else {
                     lives--;
                     document.getElementById('lives').innerText = lives;
