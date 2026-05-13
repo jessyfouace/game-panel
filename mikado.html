@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mikado - Score 🥢</title>
+
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Nos Jeux">
+    <link rel="apple-touch-icon" href="icon.png">
+    <link rel="icon" type="image/png" href="icon.png">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: #0f172a;
+            color: #f8fafc;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .glass {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        /* Animation Splash Screen Mikado */
+        @keyframes sticks-appear {
+            0% { transform: translateY(50px) rotate(-10deg); opacity: 0; }
+            100% { transform: translateY(0) rotate(0); opacity: 1; }
+        }
+        .animate-sticks { animation: sticks-appear 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+
+        @keyframes loading-bar {
+            0% { width: 0%; left: 0; }
+            50% { width: 100%; left: 0; }
+            100% { width: 0%; left: 100%; }
+        }
+        .loading-progress {
+            position: absolute;
+            height: 100%;
+            background: #f97316;
+            animation: loading-bar 1.5s infinite ease-in-out;
+            box-shadow: 0 0 15px #f97316;
+        }
+
+        .stick-btn {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .stick-btn:active {
+            transform: scale(0.92);
+        }
+        
+        .player-card {
+            transition: transform 0.3s ease;
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-10">
+
+    <!-- Splash Screen Mikado -->
+    <div id="splash-screen" class="fixed inset-0 z-[100] bg-[#0f172a] flex flex-col items-center justify-center transition-opacity duration-700">
+        <div class="relative h-40 w-40 flex items-center justify-center animate-sticks">
+            <div class="absolute inset-0 bg-orange-500/10 blur-3xl rounded-full animate-pulse"></div>
+            <!-- Icône Baguettes -->
+            <div class="relative">
+                <div class="w-1 h-32 bg-blue-500 rotate-12 absolute -left-4 rounded-full"></div>
+                <div class="w-1 h-32 bg-red-500 -rotate-6 absolute left-0 rounded-full"></div>
+                <div class="w-1 h-32 bg-black rotate-3 absolute left-4 rounded-full shadow-[0_0_10px_rgba(0,0,0,0.5)]"></div>
+                <div class="w-1 h-32 bg-green-500 -rotate-12 absolute left-8 rounded-full"></div>
+                <div class="w-1 h-32 bg-yellow-500 rotate-12 absolute left-12 rounded-full"></div>
+            </div>
+        </div>
+        
+        <h2 class="mt-8 text-2xl font-bold uppercase tracking-[0.3em] text-white">Lâcher de baguettes...</h2>
+        
+        <div class="mt-6 w-48 h-1 bg-slate-800 rounded-full overflow-hidden relative border border-white/5">
+            <div class="loading-progress"></div>
+        </div>
+    </div>
+
+    <div class="container mx-auto px-4 pt-8 max-w-lg">
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-8">
+            <a href="index.html" class="text-slate-400 hover:text-white transition-colors flex items-center gap-2">
+                <i class="fa-solid fa-arrow-left"></i> Retour
+            </a>
+            <h1 class="text-2xl font-bold text-white tracking-tight text-center flex-1 mr-8 text-orange-400">Mikado</h1>
+            <button onclick="confirmReset()" class="text-slate-500 hover:text-red-400 transition-colors">
+                <i class="fa-solid fa-rotate-right"></i>
+            </button>
+        </div>
+
+        <!-- Setup Section -->
+        <div id="setup-section" class="glass p-8 rounded-[2.5rem] mb-8">
+            <h2 class="text-xl font-bold mb-6 flex items-center gap-2">
+                <i class="fa-solid fa-users text-orange-400"></i> Joueurs
+            </h2>
+            <div id="setup-players" class="space-y-3 mb-6">
+                <input type="text" class="player-input w-full bg-slate-800/50 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50" placeholder="Nom...">
+                <input type="text" class="player-input w-full bg-slate-800/50 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50" placeholder="Nom...">
+            </div>
+            
+            <div class="flex gap-2 mb-8">
+                <button onclick="addInput()" class="flex-1 bg-slate-800 py-3 rounded-xl text-sm font-semibold hover:bg-slate-700 transition-colors">+ Joueur</button>
+                <button onclick="removeInput()" class="flex-1 bg-slate-800 py-3 rounded-xl text-sm font-semibold hover:bg-slate-700 transition-colors">- Retirer</button>
+            </div>
+
+            <button onclick="startGame()" class="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold py-5 rounded-2xl shadow-lg transition-all active:scale-95">
+                Lancer la partie
+            </button>
+        </div>
+
+        <!-- Game Section -->
+        <div id="game-section" class="hidden space-y-6">
+            <div id="players-list" class="space-y-4">
+                <!-- Rendu dynamique des joueurs -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Splash screen
+        window.onload = function() {
+            const splash = document.getElementById('splash-screen');
+            setTimeout(() => {
+                splash.style.opacity = '0';
+                setTimeout(() => splash.remove(), 700);
+            }, 1500);
+        };
+
+        let players = [];
+
+        function addInput() {
+            const container = document.getElementById('setup-players');
+            if (container.children.length < 6) {
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.className = 'player-input w-full bg-slate-800/50 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50 mt-3';
+                input.placeholder = `Nom...`;
+                container.appendChild(input);
+            }
+        }
+
+        function removeInput() {
+            const container = document.getElementById('setup-players');
+            if (container.children.length > 1) {
+                container.removeChild(container.lastChild);
+            }
+        }
+
+        function startGame() {
+            const inputs = document.querySelectorAll('.player-input');
+            players = Array.from(inputs).map(input => ({
+                name: input.value.trim() || "Anonyme",
+                score: 0
+            }));
+            
+            document.getElementById('setup-section').classList.add('hidden');
+            document.getElementById('game-section').classList.remove('hidden');
+            renderPlayers();
+        }
+
+        function addPoints(index, pts) {
+            players[index].score += pts;
+            renderPlayers();
+            if (navigator.vibrate) navigator.vibrate(20);
+        }
+
+        function renderPlayers() {
+            const container = document.getElementById('players-list');
+            container.innerHTML = players.map((p, i) => `
+                <div class="player-card glass p-6 rounded-[2.5rem] border-l-4 border-orange-500 shadow-xl">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex flex-col">
+                            <span class="text-xs font-bold text-slate-400 uppercase tracking-widest">${p.name}</span>
+                            <span class="text-4xl font-black text-white">${p.score}</span>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="addPoints(${i}, -1)" class="w-10 h-10 bg-slate-800 rounded-xl flex items-center justify-center border border-slate-700 text-slate-400 active:scale-90">-1</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Boutons points Mikado Classique -->
+                    <div class="grid grid-cols-5 gap-2">
+                        <button onclick="addPoints(${i}, 2)" class="stick-btn h-12 bg-blue-500/20 border border-blue-500/40 rounded-xl flex flex-col items-center justify-center">
+                            <span class="text-[10px] font-bold text-blue-400">BLEU</span>
+                            <span class="text-xs font-bold text-blue-300">2</span>
+                        </button>
+                        <button onclick="addPoints(${i}, 3)" class="stick-btn h-12 bg-green-500/20 border border-green-500/40 rounded-xl flex flex-col items-center justify-center">
+                            <span class="text-[10px] font-bold text-green-400">VERT</span>
+                            <span class="text-xs font-bold text-green-300">3</span>
+                        </button>
+                        <button onclick="addPoints(${i}, 5)" class="stick-btn h-12 bg-yellow-500/20 border border-yellow-500/40 rounded-xl flex flex-col items-center justify-center">
+                            <span class="text-[10px] font-bold text-yellow-400">JAUNE</span>
+                            <span class="text-xs font-bold text-yellow-300">5</span>
+                        </button>
+                        <button onclick="addPoints(${i}, 10)" class="stick-btn h-12 bg-red-500/20 border border-red-500/40 rounded-xl flex flex-col items-center justify-center">
+                            <span class="text-[10px] font-bold text-red-400">ROUGE</span>
+                            <span class="text-xs font-bold text-red-300">10</span>
+                        </button>
+                        <button onclick="addPoints(${i}, 20)" class="stick-btn h-12 bg-slate-900 border border-white/20 rounded-xl flex flex-col items-center justify-center shadow-lg">
+                            <span class="text-[10px] font-bold text-white">NOIR</span>
+                            <span class="text-xs font-bold text-white">20</span>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function confirmReset() {
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 flex items-center justify-center bg-black/90 z-[100] px-4';
+            modal.innerHTML = `
+                <div class="glass p-8 rounded-[2rem] max-w-sm w-full text-center">
+                    <h3 class="text-xl font-bold mb-2">Relancer les baguettes ?</h3>
+                    <p class="text-slate-400 text-sm mb-6">Tous les scores actuels seront effacés.</p>
+                    <div class="flex gap-4">
+                        <button onclick="this.closest('div.fixed').remove()" class="flex-1 bg-slate-700 py-3 rounded-xl font-semibold">Non</button>
+                        <button onclick="location.reload()" class="flex-1 bg-orange-600 py-3 rounded-xl font-semibold text-white">Oui</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+    </script>
+</body>
+</html>

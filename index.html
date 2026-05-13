@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Nos Soirées Jeux 🎲</title>
+    
+    <!-- Configuration PWA & iOS -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Nos Jeux">
+    
+    <!-- Remplace 'icon.png' par le nom exact de ton fichier image -->
+    <link rel="apple-touch-icon" href="icon.png">
+    <link rel="icon" type="image/png" href="icon.png">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: #0f172a;
+            color: #f8fafc;
+        }
+        .game-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .game-card:hover {
+            transform: translateY(-10px) scale(1.02);
+            border-color: rgba(255, 255, 255, 0.4);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        .bg-gradient-main {
+            background: radial-gradient(circle at top right, #1e1b4b, #0f172a);
+        }
+        .icon-box {
+            transition: transform 0.3s ease;
+        }
+        .game-card:hover .icon-box {
+            transform: rotate(12deg) scale(1.1);
+        }
+    </style>
+</head>
+<body class="bg-gradient-main min-h-screen">
+
+    <div id="splash-screen" class="fixed inset-0 z-[100] bg-[#020617] flex flex-col items-center justify-center transition-opacity duration-700">
+        <div class="relative">
+            <div class="absolute -inset-4 bg-indigo-500/20 blur-2xl rounded-full animate-pulse"></div>
+            <div class="relative bg-slate-900 p-8 rounded-full border border-indigo-500/30 shadow-2xl animate-bounce">
+                <i class="fa-solid fa-gamepad text-6xl text-indigo-400"></i>
+            </div>
+        </div>
+        <h2 class="mt-8 text-2xl font-bold tracking-[0.3em] uppercase text-indigo-200 animate-pulse">Initialisation</h2>
+        <div class="mt-4 w-48 h-1 bg-slate-800 rounded-full overflow-hidden">
+            <div class="h-full bg-indigo-500 animate-[loading_1.5s_ease-in-out_infinite]"></div>
+        </div>
+    </div>
+
+    <style>
+        @keyframes loading {
+            0% { width: 0%; transform: translateX(-100%); }
+            50% { width: 100%; transform: translateX(0%); }
+            100% { width: 0%; transform: translateX(100%); }
+        }
+    </style>
+
+    <div class="container mx-auto px-6 py-12">
+        <!-- Header -->
+        <header class="text-center mb-16">
+            <h1 class="text-5xl md:text-6xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-400">
+                Nos Soirées Jeux
+            </h1>
+        </header>
+
+        <!-- Grid de jeux -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            
+            <!-- YAMS -->
+            <a href="yams.html" class="game-card p-8 rounded-3xl block group">
+                <div class="flex items-start justify-between mb-6">
+                    <div class="icon-box w-16 h-16 bg-amber-500/20 rounded-2xl flex items-center justify-center text-amber-500 text-3xl">
+                        <i class="fa-solid fa-dice"></i>
+                    </div>
+                    <span class="text-xs font-bold uppercase tracking-widest text-amber-500/60 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20">Dés</span>
+                </div>
+                <h3 class="text-2xl font-bold mb-2 group-hover:text-amber-400 transition-colors">Yams</h3>
+                <p class="text-slate-400 text-sm leading-relaxed">Feuille de score complète avec calcul automatique des bonus.</p>
+            </a>
+
+            <!-- UNO -->
+            <a href="uno.html" class="game-card p-8 rounded-3xl block group">
+                <div class="flex items-start justify-between mb-6">
+                    <div class="icon-box w-16 h-16 bg-red-500/20 rounded-2xl flex items-center justify-center text-red-500 text-3xl">
+                        <i class="fa-solid fa-layer-group"></i>
+                    </div>
+                    <span class="text-xs font-bold uppercase tracking-widest text-red-500/60 bg-red-500/10 px-3 py-1 rounded-full border border-red-500/20">Cartes</span>
+                </div>
+                <h3 class="text-2xl font-bold mb-2 group-hover:text-red-400 transition-colors">Uno</h3>
+                <p class="text-slate-400 text-sm leading-relaxed">Compteur de victoires et suivi des points cumulés.</p>
+            </a>
+
+            <!-- BATAILLE -->
+            <a href="bataille.html" class="game-card p-8 rounded-3xl block group">
+                <div class="flex items-start justify-between mb-6">
+                    <div class="icon-box w-16 h-16 bg-blue-500/20 rounded-2xl flex items-center justify-center text-blue-500 text-3xl">
+                        <i class="fa-solid fa-fire"></i>
+                    </div>
+                    <span class="text-xs font-bold uppercase tracking-widest text-blue-500/60 bg-blue-500/10 px-3 py-1 rounded-full border border-blue-500/20">Cartes</span>
+                </div>
+                <h3 class="text-2xl font-bold mb-2 group-hover:text-blue-400 transition-colors">La Bataille</h3>
+                <p class="text-slate-400 text-sm leading-relaxed">Simple, rapide, efficace. Qui remportera toutes les cartes ?</p>
+            </a>
+
+            <!-- JEU DE L'OIE -->
+            <!-- <a href="oie.html" class="game-card p-8 rounded-3xl block group">
+                <div class="flex items-start justify-between mb-6">
+                    <div class="icon-box w-16 h-16 bg-emerald-500/20 rounded-2xl flex items-center justify-center text-emerald-500 text-3xl">
+                        <i class="fa-solid fa-map-location-dot"></i>
+                    </div>
+                    <span class="text-xs font-bold uppercase tracking-widest text-emerald-500/60 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">Plateau</span>
+                </div>
+                <h3 class="text-2xl font-bold mb-2 group-hover:text-emerald-400 transition-colors">Jeu de l'Oie</h3>
+                <p class="text-slate-400 text-sm leading-relaxed">Historique des parties et chronomètre de jeu.</p>
+            </a> -->
+
+            <!-- MIKADO -->
+
+            <a href="mikado.html" class="game-card p-8 rounded-3xl block group">
+                <div class="flex items-start justify-between mb-6">
+                    <div class="icon-box w-16 h-16 bg-orange-500/20 rounded-2xl flex items-center justify-center text-orange-500 text-3xl">
+                        <i class="fa-solid fa-grip-lines"></i>
+                    </div>
+                    <span class="text-xs font-bold uppercase tracking-widest text-orange-500/60 bg-orange-500/10 px-3 py-1 rounded-full border border-orange-500/20">Agilité</span>
+                </div>
+                <h3 class="text-xl font-bold text-white group-hover:text-orange-400 transition-colors">Mikado</h3>
+                <p class="text-slate-400 text-sm leading-relaxed">Compte les points de tes baguettes (utilisez Jeux Libres).</p>
+            </a>
+
+            <!-- Skyjo -->
+
+            <a href="skyjo.html" class="game-card p-8 rounded-3xl block group">
+                <div class="flex items-start justify-between mb-6">
+                    <div class="icon-box w-16 h-16 bg-cyan-500/20 rounded-2xl flex items-center justify-center text-cyan-500 text-3xl">
+                        <i class="fa-solid fa-grip"></i>
+                    </div>
+                    <span class="text-xs font-bold uppercase tracking-widest text-cyan-500/60 bg-cyan-500/10 px-3 py-1 rounded-full border border-cyan-500/20">Cartes</span>
+                </div>
+                <h3 class="text-xl font-bold text-white group-hover:text-cyan-400 transition-colors">Skyjo</h3>
+                <p class="text-slate-400 text-sm leading-relaxed">Compte les points du Skyjo</p>
+            </a>
+
+            <!-- DAMES -->
+            <a href="dames.html" class="game-card p-8 rounded-3xl block group">
+                <div class="flex items-start justify-between mb-6">
+                    <div class="icon-box w-16 h-16 bg-purple-500/20 rounded-2xl flex items-center justify-center text-purple-500 text-3xl">
+                        <i class="fa-solid fa-chess-board"></i>
+                    </div>
+                    <span class="text-xs font-bold uppercase tracking-widest text-purple-500/60 bg-purple-500/10 px-3 py-1 rounded-full border border-purple-500/20">Plateau</span>
+                </div>
+                <h3 class="text-2xl font-bold mb-2 group-hover:text-purple-400 transition-colors">Dames</h3>
+                <p class="text-slate-400 text-sm leading-relaxed">Suivi des duels et statistiques de victoires.</p>
+            </a>
+
+            <!-- JEU DE CARTES -->
+            <a href="cartes.html" class="game-card p-8 rounded-3xl block group">
+                <div class="flex items-start justify-between mb-6">
+                    <div class="icon-box w-16 h-16 bg-pink-500/20 rounded-2xl flex items-center justify-center text-pink-500 text-3xl">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    </div>
+                    <span class="text-xs font-bold uppercase tracking-widest text-pink-500/60 bg-pink-500/10 px-3 py-1 rounded-full border border-pink-500/20">Général</span>
+                </div>
+                <h3 class="text-2xl font-bold mb-2 group-hover:text-pink-400 transition-colors">Jeux Libres</h3>
+                <p class="text-slate-400 text-sm leading-relaxed">Un bloc-note intelligent pour tous les autres jeux de cartes.</p>
+            </a>
+
+        </div>
+
+        <!-- Guide Installation iPhone (Visible uniquement au début) -->
+        <div id="ios-prompt" class="hidden mt-12 p-6 glass rounded-3xl border-indigo-500/30 border-2 animate-bounce">
+            <div class="flex items-center gap-4">
+                <div class="text-3xl text-indigo-400">
+                    <i class="fa-solid fa-arrow-down"></i>
+                </div>
+                <div class="text-sm">
+                    <p class="font-bold text-white">Installe l'app sur ton iPhone :</p>
+                    <p class="text-slate-400">Clique sur <i class="fa-solid fa-share-from-square"></i> puis <span class="text-indigo-300 font-bold">"Sur l'écran d'accueil"</span></p>
+                </div>
+                <button onclick="document.getElementById('ios-prompt').remove()" class="ml-auto text-slate-500">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        window.onload = function() {
+            const splash = document.getElementById('splash-screen');
+            setTimeout(() => {
+                splash.style.opacity = '0';
+                setTimeout(() => splash.remove(), 700);
+            }, 1000);
+
+        }
+    </script>

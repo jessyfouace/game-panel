@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Uno - Compteur de Points 🃏</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Outfit', sans-serif; background: #0f172a; color: #f8fafc; }
+        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .uno-card { transition: all 0.3s ease; }
+        .uno-card:hover { transform: translateY(-5px); }
+        .player-card { border-left: 4px solid #ef4444; }
+    </style>
+</head>
+<body class="min-h-screen pb-10">
+
+    <div id="splash-screen" class="fixed inset-0 z-[100] bg-[#7c1d1d] flex flex-col items-center justify-center transition-opacity duration-700">
+        <div class="flex gap-4 animate-bounce">
+            <div class="w-16 h-24 bg-red-500 rounded-lg border-4 border-white flex items-center justify-center text-white font-black text-2xl shadow-2xl rotate-[-15deg]">U</div>
+            <div class="w-16 h-24 bg-blue-500 rounded-lg border-4 border-white flex items-center justify-center text-white font-black text-2xl shadow-2xl">N</div>
+            <div class="w-16 h-24 bg-yellow-500 rounded-lg border-4 border-white flex items-center justify-center text-white font-black text-2xl shadow-2xl rotate-[15deg]">O</div>
+        </div>
+        <h2 class="mt-8 text-2xl font-bold uppercase text-white tracking-widest">Préparation du deck...</h2>
+    </div>
+
+    <div class="container mx-auto px-4 pt-8 max-w-2xl">
+        <div class="flex items-center justify-between mb-8">
+            <a href="index.html" class="text-slate-400 hover:text-white transition-colors flex items-center gap-2">
+                <i class="fa-solid fa-arrow-left"></i> Retour
+            </a>
+            <h1 class="text-3xl font-bold text-red-500">Uno 🃏</h1>
+            <button onclick="confirmReset()" class="text-slate-400 hover:text-red-400 text-sm underline underline-offset-4">Réinitialiser</button>
+        </div>
+
+        <div id="setup-section" class="glass p-8 rounded-3xl mb-8">
+            <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+                <i class="fa-solid fa-user-plus text-red-500"></i> Joueurs
+            </h2>
+            <div class="flex gap-3 mb-6">
+                <input type="text" id="player-input" placeholder="Nom..." class="bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 flex-1 focus:outline-none focus:ring-2 focus:ring-red-500/50">
+                <button onclick="addPlayer()" class="bg-red-500 hover:bg-red-600 text-white font-bold px-6 py-3 rounded-xl transition-all">Ajouter</button>
+            </div>
+            <div id="players-list" class="flex flex-wrap gap-2 mb-6"></div>
+            <button id="start-btn" onclick="startGame()" disabled class="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-30 py-4 rounded-2xl font-bold transition-all">Démarrer le compteur</button>
+        </div>
+
+        <div id="game-section" class="hidden space-y-6">
+            <div id="players-scores" class="grid gap-4">
+                <!-- Les cartes des joueurs seront injectées ici -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        window.onload = function() {
+            const splash = document.getElementById('splash-screen');
+            setTimeout(() => {
+                splash.style.opacity = '0';
+                setTimeout(() => splash.remove(), 700);
+            }, 1000);
+        };
+
+        let players = [];
+
+        function addPlayer() {
+            const input = document.getElementById('player-input');
+            const name = input.value.trim();
+            if (name) {
+                players.push({ name, wins: 0, points: 0 });
+                input.value = '';
+                updateSetupList();
+            }
+        }
+
+        function updateSetupList() {
+            const list = document.getElementById('players-list');
+            list.innerHTML = players.map((p, i) => `
+                <span class="bg-red-500/20 text-red-300 border border-red-500/30 px-4 py-2 rounded-full flex items-center gap-2">
+                    ${p.name} <button onclick="players.splice(${i}, 1); updateSetupList()"><i class="fa-solid fa-xmark"></i></button>
+                </span>
+            `).join('');
+            document.getElementById('start-btn').disabled = players.length < 1;
+        }
+
+        function startGame() {
+            document.getElementById('setup-section').classList.add('hidden');
+            document.getElementById('game-section').classList.remove('hidden');
+            renderScores();
+        }
+
+        function renderScores() {
+            const container = document.getElementById('players-scores');
+            container.innerHTML = players.map((p, i) => `
+                <div class="glass p-6 rounded-3xl player-card flex flex-col md:flex-row md:items-center justify-between gap-6">
+                    <div>
+                        <h3 class="text-2xl font-bold text-white mb-1">${p.name}</h3>
+                        <p class="text-slate-400 text-sm uppercase tracking-widest font-semibold">${p.wins} Victoires</p>
+                    </div>
+                    
+                    <div class="flex items-center gap-4">
+                        <div class="text-right">
+                            <div class="text-3xl font-black text-red-500">${p.points}</div>
+                            <div class="text-[10px] text-slate-500 uppercase font-bold">Points cumulés</div>
+                        </div>
+                        <div class="flex flex-col gap-2">
+                            <button onclick="addPoints(${i})" class="bg-red-500/10 hover:bg-red-500/20 text-red-500 px-4 py-2 rounded-xl text-sm font-bold border border-red-500/20 transition-all">
+                                + Points
+                            </button>
+                            <button onclick="addWin(${i})" class="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 px-4 py-2 rounded-xl text-sm font-bold border border-emerald-500/20 transition-all">
+                                Gagner !
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function addWin(index) {
+            players[index].wins++;
+            renderScores();
+        }
+
+        function addPoints(index) {
+            // Création d'un petit formulaire d'ajout rapide
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 flex items-center justify-center bg-black/80 z-[100] px-4';
+            modal.innerHTML = `
+                <div class="glass p-8 rounded-3xl max-w-sm w-full">
+                    <h3 class="text-xl font-bold mb-4 text-center">Ajouter des points pour ${players[index].name}</h3>
+                    <input type="number" id="points-input" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-4 text-center text-2xl font-bold text-white focus:outline-none mb-6" placeholder="0">
+                    <div class="flex gap-4">
+                        <button id="cancel-pts" class="flex-1 bg-slate-700 py-3 rounded-xl font-semibold">Annuler</button>
+                        <button id="confirm-pts" class="flex-1 bg-red-500 py-3 rounded-xl font-semibold">Ajouter</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            
+            const input = document.getElementById('points-input');
+            input.focus();
+
+            document.getElementById('cancel-pts').onclick = () => modal.remove();
+            document.getElementById('confirm-pts').onclick = () => {
+                const val = parseInt(input.value) || 0;
+                players[index].points += val;
+                renderScores();
+                modal.remove();
+            };
+        }
+
+        function confirmReset() {
+            if(confirm("Réinitialiser tous les scores du Uno ?")) location.reload();
+        }
+    </script>
+</body>
+</html>

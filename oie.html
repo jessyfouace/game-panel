@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jeu de l'Oie - Assistant 🦢</title>
+
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Nos Jeux">
+    <link rel="apple-touch-icon" href="icon.png">
+    <link rel="icon" type="image/png" href="icon.png">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: #0f172a;
+            color: #f8fafc;
+        }
+        .glass {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        /* Animation Splash Screen */
+        @keyframes goose-waddle {
+            0% { transform: translateX(-50px) rotate(-5deg); opacity: 0; }
+            50% { transform: translateX(10px) rotate(5deg); opacity: 1; }
+            100% { transform: translateX(0) rotate(0deg); opacity: 1; }
+        }
+        .animate-goose { animation: goose-waddle 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+
+        @keyframes loading-bar {
+            0% { width: 0%; left: 0; }
+            50% { width: 100%; left: 0; }
+            100% { width: 0%; left: 100%; }
+        }
+        .loading-progress {
+            position: absolute;
+            height: 100%;
+            background: #10b981;
+            animation: loading-bar 1.5s infinite ease-in-out;
+            box-shadow: 0 0 15px #10b981;
+        }
+
+        .die {
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .rolling {
+            animation: roll 0.5s infinite linear;
+        }
+        @keyframes roll {
+            0% { transform: rotate(0deg) scale(1); }
+            50% { transform: rotate(180deg) scale(0.8); }
+            100% { transform: rotate(360deg) scale(1); }
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-10">
+
+    <!-- Splash Screen Jeu de l'Oie -->
+    <div id="splash-screen" class="fixed inset-0 z-[100] bg-[#0f172a] flex flex-col items-center justify-center transition-opacity duration-700">
+        <div class="relative h-40 w-40 flex items-center justify-center animate-goose">
+            <!-- Halo -->
+            <div class="absolute inset-0 bg-emerald-500/20 blur-3xl rounded-full animate-pulse"></div>
+            <!-- Icône d'oie SVG -->
+            <svg viewBox="0 0 512 512" class="w-32 h-32 fill-emerald-400 drop-shadow-[0_0_15px_rgba(16,185,129,0.5)]">
+                <path d="M190.5 68.8C210.5 45.4 245.9 32 284 32c79.5 0 144 64.5 144 144v14.9c0 10.9 4.1 21.4 11.5 29.4l45 48.5c11.1 12 17.5 27.7 17.5 44.2V328c0 35.3-28.7 64-64 64H320c-15.5 0-30.6-5.6-42.5-15.9L191.1 301.2c-7.1-6.1-17.3-6.1-24.4 0L80.5 376.1c-11.9 10.3-27 15.9-42.5 15.9H16c-8.8 0-16-7.2-16-16s7.2-16 16-16h22c4.1 0 8.1-1.5 11.3-4.2l86.2-74.9c25.4-22.1 61.9-22.1 87.3 0l51.5 44.7c3.2 2.7 7.2 4.2 11.3 4.2h116.4c17.7 0 32-14.3 32-32v-15c0-4.4-1.7-8.6-4.7-11.8l-45-48.5c-14.7-15.8-23-36.8-23-58.7V176c0-61.9-50.1-112-112-112c-26.6 0-51.2 9.3-70.5 24.8c-7.1 5.7-17.5 4.5-23.2-2.6s-4.5-17.5 2.6-23.2z"/>
+            </svg>
+        </div>
+        
+        <h2 class="mt-8 text-2xl font-bold uppercase tracking-[0.3em] text-white">Bonne route !</h2>
+        
+        <div class="mt-6 w-48 h-1 bg-slate-800 rounded-full overflow-hidden relative border border-white/5">
+            <div class="loading-progress"></div>
+        </div>
+    </div>
+
+    <div class="container mx-auto px-4 pt-8 max-w-lg">
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-8">
+            <a href="index.html" class="text-slate-400 hover:text-white transition-colors flex items-center gap-2">
+                <i class="fa-solid fa-arrow-left"></i> Retour
+            </a>
+            <h1 class="text-2xl font-bold text-white tracking-tight">Jeu de l'Oie 🦢</h1>
+            <button onclick="confirmReset()" class="text-slate-500 hover:text-red-400 transition-colors">
+                <i class="fa-solid fa-rotate-right"></i>
+            </button>
+        </div>
+
+        <!-- Configuration Section -->
+        <div id="setup-section" class="glass p-8 rounded-[2.5rem] mb-8">
+            <h2 class="text-xl font-bold mb-6 flex items-center gap-2">
+                <i class="fa-solid fa-person-walking text-emerald-400"></i> Les Voyageurs
+            </h2>
+            <div id="setup-players" class="space-y-3 mb-6">
+                <!-- Les joueurs par défaut -->
+                <div class="flex gap-2">
+                    <input type="text" class="player-input w-full bg-slate-800/50 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50" placeholder="Nom...">
+                </div>
+                <div class="flex gap-2">
+                    <input type="text" class="player-input w-full bg-slate-800/50 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50" placeholder="Nom...">
+                </div>
+            </div>
+            
+            <div class="flex gap-2 mb-8">
+                <button onclick="addInput()" class="flex-1 bg-slate-800 py-3 rounded-xl text-sm font-semibold">+ Ajouter</button>
+                <button onclick="removeInput()" class="flex-1 bg-slate-800 py-3 rounded-xl text-sm font-semibold">- Retirer</button>
+            </div>
+
+            <button onclick="startGame()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-5 rounded-2xl shadow-lg transition-all active:scale-95">
+                Lancer l'aventure
+            </button>
+        </div>
+
+        <!-- Game Section -->
+        <div id="game-section" class="hidden">
+            <!-- Dice area -->
+            <div class="glass p-8 rounded-[2.5rem] mb-8 text-center">
+                <div class="flex justify-center gap-6 mb-6">
+                    <div id="die1" class="die w-20 h-20 bg-white text-slate-900 rounded-2xl flex items-center justify-center text-4xl font-black shadow-xl">1</div>
+                    <div id="die2" class="die w-20 h-20 bg-white text-slate-900 rounded-2xl flex items-center justify-center text-4xl font-black shadow-xl">1</div>
+                </div>
+                <button onclick="rollDice()" id="roll-btn" class="bg-indigo-600 hover:bg-indigo-500 text-white px-10 py-4 rounded-2xl font-bold transition-all active:scale-95 shadow-lg flex items-center gap-3 mx-auto">
+                    <i class="fa-solid fa-dice"></i> Lancer les dés
+                </button>
+            </div>
+
+            <!-- Players Status -->
+            <div id="players-status" class="space-y-4">
+                <!-- Rendu via JS -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Splash screen
+        window.onload = function() {
+            const splash = document.getElementById('splash-screen');
+            setTimeout(() => {
+                splash.style.opacity = '0';
+                setTimeout(() => splash.remove(), 700);
+            }, 1500);
+        };
+
+        let players = [];
+
+        function addInput() {
+            const container = document.getElementById('setup-players');
+            if (container.children.length < 6) {
+                const div = document.createElement('div');
+                div.className = 'flex gap-2';
+                div.innerHTML = `<input type="text" class="player-input w-full bg-slate-800/50 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50" placeholder="Nom...">`;
+                container.appendChild(div);
+            }
+        }
+
+        function removeInput() {
+            const container = document.getElementById('setup-players');
+            if (container.children.length > 2) {
+                container.removeChild(container.lastChild);
+            }
+        }
+
+        function startGame() {
+            const inputs = document.querySelectorAll('.player-input');
+            players = Array.from(inputs).map(input => ({
+                name: input.value.trim() || "Anonyme",
+                position: 1
+            }));
+            
+            document.getElementById('setup-section').classList.add('hidden');
+            document.getElementById('game-section').classList.remove('hidden');
+            renderStatus();
+        }
+
+        function rollDice() {
+            const btn = document.getElementById('roll-btn');
+            const d1 = document.getElementById('die1');
+            const d2 = document.getElementById('die2');
+            
+            btn.disabled = true;
+            d1.classList.add('rolling');
+            d2.classList.add('rolling');
+
+            setTimeout(() => {
+                const v1 = Math.floor(Math.random() * 6) + 1;
+                const v2 = Math.floor(Math.random() * 6) + 1;
+                
+                d1.textContent = v1;
+                d2.textContent = v2;
+                
+                d1.classList.remove('rolling');
+                d2.classList.remove('rolling');
+                btn.disabled = false;
+                
+                if (navigator.vibrate) navigator.vibrate([30, 50, 30]);
+            }, 600);
+        }
+
+        function updatePos(index, delta) {
+            players[index].position = Math.max(1, Math.min(63, players[index].position + delta));
+            renderStatus();
+            if (navigator.vibrate) navigator.vibrate(20);
+        }
+
+        function renderStatus() {
+            const container = document.getElementById('players-status');
+            container.innerHTML = players.map((p, i) => `
+                <div class="glass p-5 rounded-3xl flex items-center justify-between border-l-4 ${p.position >= 63 ? 'border-amber-400' : 'border-emerald-500'}">
+                    <div class="flex flex-col">
+                        <span class="text-xs font-bold text-slate-500 uppercase tracking-widest">${p.name}</span>
+                        <div class="flex items-baseline gap-2">
+                            <span class="text-3xl font-black text-white">${p.position}</span>
+                            <span class="text-[10px] text-slate-400">/ 63</span>
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="updatePos(${i}, -1)" class="w-10 h-10 bg-slate-800 rounded-xl flex items-center justify-center border border-slate-700 active:scale-90">-</button>
+                        <button onclick="updatePos(${i}, 1)" class="w-10 h-10 bg-slate-800 rounded-xl flex items-center justify-center border border-slate-700 active:scale-90">+</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function confirmReset() {
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 flex items-center justify-center bg-black/90 z-[100] px-4';
+            modal.innerHTML = `
+                <div class="glass p-8 rounded-[2rem] max-w-sm w-full text-center">
+                    <h3 class="text-xl font-bold mb-2">Recommencer ?</h3>
+                    <p class="text-slate-400 text-sm mb-6">Tous les voyageurs retourneront à la case départ.</p>
+                    <div class="flex gap-4">
+                        <button onclick="this.closest('div.fixed').remove()" class="flex-1 bg-slate-700 py-3 rounded-xl font-semibold">Non</button>
+                        <button onclick="location.reload()" class="flex-1 bg-emerald-600 py-3 rounded-xl font-semibold text-white">Oui</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+    </script>
+</body>
+</html>

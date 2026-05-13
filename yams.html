@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yams - Scoreboard 🎲</title>
+
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Nos Jeux">
+    <link rel="apple-touch-icon" href="icon.png">
+    <link rel="icon" type="image/png" href="icon.png">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: #0f172a;
+            color: #f8fafc;
+        }
+        .glass {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        .row-hover:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+        .total-row {
+            background: rgba(245, 158, 11, 0.1) !important;
+            font-weight: bold;
+        }
+        .tooltip-container {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+        }
+        .tooltip-text {
+            visibility: hidden;
+            width: 200px;
+            background-color: #1e293b;
+            color: #fff;
+            text-align: center;
+            border-radius: 8px;
+            padding: 8px;
+            position: absolute;
+            z-index: 50;
+            bottom: 125%;
+            left: 0;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 0.75rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            pointer-events: none;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
+        }
+        .tooltip-container:hover .tooltip-text, 
+        .tooltip-container.active .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        /* Animation de la barre de chargement */
+        @keyframes loading-bar {
+            0% { width: 0%; transform: translateX(-100%); }
+            50% { width: 70%; transform: translateX(50%); }
+            100% { width: 0%; transform: translateX(200%); }
+        }
+        .animate-loading-bar {
+            animation: loading-bar 1.5s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-10">
+
+    <!-- Splash Screen Yams -->
+    <div id="splash-screen" class="fixed inset-0 z-[100] bg-[#0f172a] flex flex-col items-center justify-center transition-opacity duration-700">
+        <div class="relative">
+            <!-- Effet de halo -->
+            <div class="absolute -inset-10 bg-amber-500/20 blur-3xl rounded-full animate-pulse"></div>
+            
+            <!-- Dés animés -->
+            <div class="relative flex gap-4 text-6xl text-amber-500">
+                <i class="fa-solid fa-dice-one animate-[bounce_1s_infinite_0.1s]"></i>
+                <i class="fa-solid fa-dice-six animate-[bounce_1s_infinite_0.3s]"></i>
+                <i class="fa-solid fa-dice-three animate-[bounce_1s_infinite_0.2s]"></i>
+            </div>
+        </div>
+        <h2 class="mt-10 text-2xl font-bold uppercase tracking-[0.4em] text-amber-400 animate-pulse">Lancement...</h2>
+        
+        <!-- Barre de progression -->
+        <div class="mt-6 w-48 h-1.5 bg-slate-800 rounded-full overflow-hidden border border-white/5">
+            <div class="h-full bg-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.5)] animate-loading-bar"></div>
+        </div>
+    </div>
+
+    <div class="container mx-auto px-4 pt-8 max-w-4xl">
+        <div class="flex items-center justify-between mb-8">
+            <a href="index.html" class="text-slate-400 hover:text-white transition-colors flex items-center gap-2">
+                <i class="fa-solid fa-arrow-left"></i> Retour
+            </a>
+            <h1 class="text-3xl font-bold text-amber-500">Yams 🎲</h1>
+            <button onclick="resetGame()" class="text-red-400 hover:text-red-300 text-sm font-semibold underline decoration-2 underline-offset-4">
+                Réinitialiser
+            </button>
+        </div>
+
+        <!-- Section de Configuration -->
+        <div id="setup-section" class="glass p-8 rounded-3xl mb-8">
+            <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+                <i class="fa-solid fa-users text-amber-500"></i> Configuration de la partie
+            </h2>
+            <div class="flex gap-3 mb-6">
+                <input type="text" id="player-input" placeholder="Nom du joueur..." 
+                       class="bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 flex-1 focus:outline-none focus:ring-2 focus:ring-amber-500/50 text-white">
+                <button onclick="addPlayer()" class="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold px-6 py-3 rounded-xl transition-all active:scale-95">
+                    Ajouter
+                </button>
+            </div>
+            <div id="players-list" class="flex flex-wrap gap-2 mb-6"></div>
+            <button id="start-btn" onclick="startGame()" disabled class="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-30 disabled:cursor-not-allowed text-white font-bold py-4 rounded-2xl shadow-lg transition-all">
+                Lancer la partie
+            </button>
+        </div>
+
+        <!-- Section de Jeu (Tableau) -->
+        <div id="game-section" class="hidden">
+            <div class="overflow-x-auto glass rounded-3xl">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr id="table-header" class="border-b border-white/10">
+                            <th class="p-4 text-slate-400 font-semibold sticky left-0 bg-[#1e293b]/90">Catégories</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body">
+                        <!-- Le contenu sera injecté par JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Gestion de l'écran de chargement
+        window.onload = function() {
+            const splash = document.getElementById('splash-screen');
+            setTimeout(() => {
+                splash.style.opacity = '0';
+                setTimeout(() => splash.remove(), 700);
+            }, 1000);
+        };
+
+        let players = [];
+        const categories = [
+            { id: '1', label: 'Les 1 (As)', section: 'upper', desc: 'Somme de tous les dés avec la valeur 1.' },
+            { id: '2', label: 'Les 2', section: 'upper', desc: 'Somme de tous les dés avec la valeur 2.' },
+            { id: '3', label: 'Les 3', section: 'upper', desc: 'Somme de tous les dés avec la valeur 3.' },
+            { id: '4', label: 'Les 4', section: 'upper', desc: 'Somme de tous les dés avec la valeur 4.' },
+            { id: '5', label: 'Les 5', section: 'upper', desc: 'Somme de tous les dés avec la valeur 5.' },
+            { id: '6', label: 'Les 6', section: 'upper', desc: 'Somme de tous les dés avec la valeur 6.' },
+            { id: 'bonus', label: 'Bonus (+35)', section: 'upper-meta', readonly: true, desc: 'Accordé si le total de la section haute est ≥ 63.' },
+            { id: 'total-upper', label: 'TOTAL HAUT', section: 'upper-meta', readonly: true, desc: 'Somme des points de la section haute + bonus.' },
+            { id: 'spacer', label: '', section: 'spacer' },
+            { id: 'brelan', label: 'Brelan', section: 'lower', desc: 'Au moins 3 dés identiques. Score = Somme des 5 dés.' },
+            { id: 'carre', label: 'Carré', section: 'lower', desc: 'Au moins 4 dés identiques. Score = Somme des 5 dés.' },
+            { id: 'full', label: 'Full', section: 'lower', desc: '3 dés d’une valeur et 2 dés d’une autre. Score = 25 pts.' },
+            { id: 'petite-suite', label: 'Pte Suite', section: 'lower', desc: '4 dés qui se suivent (ex: 1-2-3-4). Score = 30 pts.' },
+            { id: 'grande-suite', label: 'Gde Suite', section: 'lower', desc: '5 dés qui se suivent (ex: 1-2-3-4-5). Score = 40 pts.' },
+            { id: 'yams', label: 'YAMS', section: 'lower', desc: '5 dés identiques. Score = 50 pts.' },
+            { id: 'chance', label: 'Chance', section: 'lower', desc: 'N’importe quelle combinaison. Score = Somme des 5 dés.' },
+            { id: 'grand-total', label: 'GRAND TOTAL', section: 'final', readonly: true, desc: 'Total final de tous les points.' }
+        ];
+
+        function addPlayer() {
+            const input = document.getElementById('player-input');
+            const name = input.value.trim();
+            if (name && players.length < 6) {
+                players.push(name);
+                input.value = '';
+                updatePlayersList();
+            }
+        }
+
+        function updatePlayersList() {
+            const list = document.getElementById('players-list');
+            const startBtn = document.getElementById('start-btn');
+            list.innerHTML = players.map((p, i) => `
+                <span class="bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-4 py-2 rounded-full flex items-center gap-2">
+                    ${p} <button onclick="removePlayer(${i})"><i class="fa-solid fa-xmark"></i></button>
+                </span>
+            `).join('');
+            startBtn.disabled = players.length === 0;
+        }
+
+        function removePlayer(index) {
+            players.splice(index, 1);
+            updatePlayersList();
+        }
+
+        function startGame() {
+            document.getElementById('setup-section').classList.add('hidden');
+            document.getElementById('game-section').classList.remove('hidden');
+            
+            const header = document.getElementById('table-header');
+            players.forEach(p => {
+                const th = document.createElement('th');
+                th.className = 'p-4 text-center font-bold text-indigo-300';
+                th.textContent = p;
+                header.appendChild(th);
+            });
+
+            const tbody = document.getElementById('table-body');
+            tbody.insertAdjacentHTML('beforeend', '<tr class="bg-white/5"><td colspan="100" class="p-2 text-xs font-bold uppercase tracking-widest text-amber-500/60 px-4 italic">Section Haute</td></tr>');
+            
+            categories.forEach(cat => {
+                if (cat.section === 'spacer') {
+                    tbody.insertAdjacentHTML('beforeend', '<tr class="bg-white/5"><td colspan="100" class="p-2 text-xs font-bold uppercase tracking-widest text-amber-500/60 px-4 italic">Section Basse</td></tr>');
+                    return;
+                }
+
+                const row = document.createElement('tr');
+                row.className = `row-hover border-b border-white/5 ${cat.readonly ? 'total-row' : ''}`;
+                
+                let labelHtml = `
+                    <div class="tooltip-container cursor-help" onclick="toggleTooltip(this)">
+                        ${cat.label}
+                        <i class="fa-solid fa-circle-info ml-2 text-xs text-slate-500"></i>
+                        <span class="tooltip-text font-normal">${cat.desc}</span>
+                    </div>
+                `;
+
+                let html = `<td class="p-4 font-medium text-slate-300 sticky left-0 bg-[#1e293b]/90 whitespace-nowrap">${labelHtml}</td>`;
+                
+                players.forEach((_, pIdx) => {
+                    const cellId = `p${pIdx}-${cat.id}`;
+                    if (cat.readonly) {
+                        html += `<td class="p-4 text-center text-amber-400 font-bold" id="${cellId}">0</td>`;
+                    } else {
+                        html += `
+                            <td class="p-2">
+                                <input type="number" id="${cellId}" oninput="calculateScores()" 
+                                       class="w-full bg-slate-800/50 border border-transparent focus:border-amber-500/50 rounded-lg p-2 text-center text-white focus:outline-none transition-all"
+                                       placeholder="-">
+                            </td>`;
+                    }
+                });
+                
+                row.innerHTML = html;
+                tbody.appendChild(row);
+            });
+        }
+
+        function calculateScores() {
+            players.forEach((_, pIdx) => {
+                let upperTotal = 0;
+                let lowerTotal = 0;
+
+                // Section Haute
+                for (let i = 1; i <= 6; i++) {
+                    const val = parseInt(document.getElementById(`p${pIdx}-${i}`).value) || 0;
+                    upperTotal += val;
+                }
+
+                const bonus = upperTotal >= 63 ? 35 : 0;
+                document.getElementById(`p${pIdx}-bonus`).textContent = bonus;
+                document.getElementById(`p${pIdx}-total-upper`).textContent = upperTotal + bonus;
+
+                // Section Basse
+                const lowerCats = ['brelan', 'carre', 'full', 'petite-suite', 'grande-suite', 'yams', 'chance'];
+                lowerCats.forEach(catId => {
+                    const element = document.getElementById(`p${pIdx}-${catId}`);
+                    if (element) {
+                        const val = parseInt(element.value) || 0;
+                        lowerTotal += val;
+                    }
+                });
+
+                document.getElementById(`p${pIdx}-grand-total`).textContent = upperTotal + bonus + lowerTotal;
+            });
+        }
+
+        function toggleTooltip(element) {
+            document.querySelectorAll('.tooltip-container').forEach(el => {
+                if (el !== element) el.classList.remove('active');
+            });
+            element.classList.toggle('active');
+        }
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.tooltip-container')) {
+                document.querySelectorAll('.tooltip-container').forEach(el => el.classList.remove('active'));
+            }
+        });
+
+        function resetGame() {
+            const confirmBox = document.createElement('div');
+            confirmBox.className = 'fixed inset-0 flex items-center justify-center bg-black/80 z-[100] px-4';
+            confirmBox.innerHTML = `
+                <div class="glass p-8 rounded-3xl max-w-sm w-full text-center">
+                    <h3 class="text-xl font-bold mb-4">Réinitialiser ?</h3>
+                    <p class="text-slate-400 mb-6">Toute la progression de la partie sera perdue.</p>
+                    <div class="flex gap-4">
+                        <button id="cancel-reset" class="flex-1 bg-slate-700 py-3 rounded-xl font-semibold">Annuler</button>
+                        <button id="confirm-reset" class="flex-1 bg-red-500 py-3 rounded-xl font-semibold text-white">Réinitialiser</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(confirmBox);
+            
+            document.getElementById('cancel-reset').onclick = () => confirmBox.remove();
+            document.getElementById('confirm-reset').onclick = () => location.reload();
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jeux de Cartes - Score 🃏</title>
+
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Nos Jeux">
+    <link rel="apple-touch-icon" href="icon.png">
+    <link rel="icon" type="image/png" href="icon.png">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: #0f172a;
+            color: #f8fafc;
+        }
+        .glass {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        /* Animation Splash Screen */
+        @keyframes card-flip {
+            0% { transform: rotateY(0deg) scale(0.5); opacity: 0; }
+            50% { transform: rotateY(180deg) scale(1.1); opacity: 1; }
+            100% { transform: rotateY(360deg) scale(1); opacity: 1; }
+        }
+        .animate-card { animation: card-flip 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+
+        @keyframes loading-bar {
+            0% { width: 0%; left: 0; }
+            50% { width: 100%; left: 0; }
+            100% { width: 0%; left: 100%; }
+        }
+        .loading-progress {
+            position: absolute;
+            height: 100%;
+            background: #ec4899;
+            animation: loading-bar 1.5s infinite ease-in-out;
+            box-shadow: 0 0 15px #ec4899;
+        }
+
+        .player-row {
+            transition: all 0.3s ease;
+        }
+
+        .score-badge {
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .score-badge:active {
+            transform: scale(0.9);
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-10">
+
+    <!-- Splash Screen Cartes -->
+    <div id="splash-screen" class="fixed inset-0 z-[100] bg-[#0f172a] flex flex-col items-center justify-center transition-opacity duration-700">
+        <div class="relative h-40 w-40 flex items-center justify-center animate-card">
+            <div class="absolute inset-0 bg-pink-500/20 blur-3xl rounded-full animate-pulse"></div>
+            <svg viewBox="0 0 512 512" class="w-32 h-32 fill-pink-500 drop-shadow-[0_0_15px_rgba(236,72,153,0.5)]">
+                <path d="M256 32C164 32 85.1 84.4 85.1 184.2c0 40.6 17.1 80.4 49 111.4 31.9 31 71.9 51.5 110.1 72.3 3.9 2.1 7.8 4.2 11.8 6.4V416h-32c-17.7 0-32 14.3-32 32s14.3 32 32 32h64 64c17.7 0 32-14.3 32-32s-14.3-32-32-32h-32v-41.7c4-2.2 7.9-4.3 11.8-6.4 38.2-20.8 78.2-41.3 110.1-72.3 31.9-31 49-70.8 49-111.4C426.9 84.4 348 32 256 32z"/>
+            </svg>
+        </div>
+        <h2 class="mt-8 text-2xl font-bold uppercase tracking-[0.3em] text-white">Distribution...</h2>
+        <div class="mt-6 w-48 h-1 bg-slate-800 rounded-full overflow-hidden relative border border-white/5">
+            <div class="loading-progress"></div>
+        </div>
+    </div>
+
+    <div class="container mx-auto px-4 pt-8 max-w-lg">
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-8">
+            <a href="index.html" class="text-slate-400 hover:text-white transition-colors flex items-center gap-2">
+                <i class="fa-solid fa-arrow-left"></i> Retour
+            </a>
+            <h1 class="text-2xl font-bold text-white tracking-tight text-center flex-1 mr-8 text-pink-400">Jeux de Cartes</h1>
+            <button onclick="confirmReset()" class="text-slate-500 hover:text-red-400 transition-colors">
+                <i class="fa-solid fa-rotate-right"></i>
+            </button>
+        </div>
+
+        <!-- Configuration Section -->
+        <div id="setup-section" class="glass p-8 rounded-[2.5rem] mb-8">
+            <h2 class="text-xl font-bold mb-6 flex items-center gap-2">
+                <i class="fa-solid fa-users text-pink-400"></i> Autour de la table
+            </h2>
+            <div id="setup-players" class="space-y-3 mb-6">
+                <div class="flex gap-2">
+                    <input type="text" class="player-input w-full bg-slate-800/50 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-pink-500/50" placeholder="Nom...">
+                </div>
+                <div class="flex gap-2">
+                    <input type="text" class="player-input w-full bg-slate-800/50 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-pink-500/50" placeholder="Nom...">
+                </div>
+            </div>
+            
+            <div class="flex gap-2 mb-8">
+                <button onclick="addInput()" class="flex-1 bg-slate-800 py-3 rounded-xl text-sm font-semibold hover:bg-slate-700 transition-colors">+ Joueur</button>
+                <button onclick="removeInput()" class="flex-1 bg-slate-800 py-3 rounded-xl text-sm font-semibold hover:bg-slate-700 transition-colors">- Retirer</button>
+            </div>
+
+            <button onclick="startGame()" class="w-full bg-pink-600 hover:bg-pink-500 text-white font-bold py-5 rounded-2xl shadow-lg transition-all active:scale-95">
+                Commencer la partie
+            </button>
+        </div>
+
+        <!-- Game Section -->
+        <div id="game-section" class="hidden space-y-4">
+            <div id="players-list" class="space-y-4">
+                <!-- Rendu dynamique -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Splash screen logic
+        window.onload = function() {
+            const splash = document.getElementById('splash-screen');
+            setTimeout(() => {
+                splash.style.opacity = '0';
+                setTimeout(() => splash.remove(), 700);
+            }, 1200);
+        };
+
+        let players = [];
+
+        function addInput() {
+            const container = document.getElementById('setup-players');
+            if (container.children.length < 8) {
+                const div = document.createElement('div');
+                div.className = 'flex gap-2';
+                div.innerHTML = `<input type="text" class="player-input w-full bg-slate-800/50 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-pink-500/50" placeholder="Nom...">`;
+                container.appendChild(div);
+            }
+        }
+
+        function removeInput() {
+            const container = document.getElementById('setup-players');
+            if (container.children.length > 1) {
+                container.removeChild(container.lastChild);
+            }
+        }
+
+        function startGame() {
+            const inputs = document.querySelectorAll('.player-input');
+            players = Array.from(inputs).map(input => ({
+                name: input.value.trim() || "Anonyme",
+                score: 0
+            }));
+            
+            document.getElementById('setup-section').classList.add('hidden');
+            document.getElementById('game-section').classList.remove('hidden');
+            renderPlayers();
+        }
+
+        function addPoints(index, points) {
+            players[index].score += points;
+            renderPlayers();
+            if (navigator.vibrate) navigator.vibrate(20);
+        }
+
+        function openCustomScore(index) {
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 flex items-center justify-center bg-black/90 z-[100] px-4';
+            modal.innerHTML = `
+                <div class="glass p-8 rounded-[2.5rem] max-w-sm w-full shadow-2xl border border-pink-500/20">
+                    <h3 class="text-xl font-bold mb-4 text-center">Score libre pour ${players[index].name}</h3>
+                    <input type="number" id="points-input" class="w-full bg-slate-800 border border-slate-700 rounded-2xl px-4 py-5 text-center text-3xl font-bold text-white focus:outline-none mb-6" placeholder="0">
+                    <div class="grid grid-cols-2 gap-4">
+                        <button id="cancel-pts" class="bg-slate-700 py-4 rounded-xl font-semibold">Annuler</button>
+                        <button id="confirm-pts" class="bg-pink-600 py-4 rounded-xl font-semibold text-white">Ajouter</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            
+            const input = document.getElementById('points-input');
+            input.focus();
+
+            document.getElementById('cancel-pts').onclick = () => modal.remove();
+            document.getElementById('confirm-pts').onclick = () => {
+                const val = parseInt(input.value) || 0;
+                addPoints(index, val);
+                modal.remove();
+            };
+        }
+
+        function renderPlayers() {
+            const container = document.getElementById('players-list');
+            container.innerHTML = players.map((p, i) => `
+                <div class="player-row glass p-6 rounded-[2.5rem] flex flex-col gap-4 border-l-4 border-pink-500 shadow-xl">
+                    <div class="flex items-center justify-between">
+                        <div class="flex flex-col">
+                            <span class="text-xs font-bold text-slate-400 uppercase tracking-widest">${p.name}</span>
+                            <span class="text-4xl font-black text-white">${p.score}</span>
+                        </div>
+                        <button onclick="openCustomScore(${i})" class="w-12 h-12 bg-slate-800 rounded-2xl flex items-center justify-center border border-slate-700 active:scale-90 transition-transform">
+                            <i class="fa-solid fa-keyboard text-slate-300"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="grid grid-cols-3 gap-3">
+                        <button onclick="addPoints(${i}, 1)" class="score-badge bg-pink-500/10 hover:bg-pink-500/20 border border-pink-500/30 text-pink-400 font-bold py-3 rounded-xl">+1</button>
+                        <button onclick="addPoints(${i}, 10)" class="score-badge bg-pink-500/20 hover:bg-pink-500/30 border border-pink-500/40 text-pink-400 font-bold py-3 rounded-xl">+10</button>
+                        <button onclick="addPoints(${i}, 50)" class="score-badge bg-pink-600 hover:bg-pink-500 text-white font-bold py-3 rounded-xl shadow-lg">+50</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function confirmReset() {
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 flex items-center justify-center bg-black/90 z-[100] px-4';
+            modal.innerHTML = `
+                <div class="glass p-8 rounded-[2rem] max-w-sm w-full text-center">
+                    <h3 class="text-xl font-bold mb-2">Nouvelle partie ?</h3>
+                    <p class="text-slate-400 text-sm mb-6">Tous les scores seront remis à zéro.</p>
+                    <div class="flex gap-4">
+                        <button onclick="this.closest('div.fixed').remove()" class="flex-1 bg-slate-700 py-3 rounded-xl font-semibold">Non</button>
+                        <button onclick="location.reload()" class="flex-1 bg-pink-600 py-3 rounded-xl font-semibold text-white">Oui</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dames - Score 🏆</title>
+
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Nos Jeux">
+    <link rel="apple-touch-icon" href="icon.png">
+    <link rel="icon" type="image/png" href="icon.png">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: #0f172a;
+            color: #f8fafc;
+        }
+        .glass {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        /* Animation Splash Screen */
+        @keyframes checker-slide {
+            0% { transform: translateY(100px) scale(0); opacity: 0; }
+            60% { transform: translateY(-10px) scale(1.1); opacity: 1; }
+            100% { transform: translateY(0) scale(1); opacity: 1; }
+        }
+        .animate-checker { animation: checker-slide 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+
+        @keyframes loading-bar {
+            0% { width: 0%; left: 0; }
+            50% { width: 100%; left: 0; }
+            100% { width: 0%; left: 100%; }
+        }
+        .loading-progress {
+            position: absolute;
+            height: 100%;
+            background: #a855f7;
+            animation: loading-bar 1.5s infinite ease-in-out;
+            box-shadow: 0 0 15px #a855f7;
+        }
+
+        .player-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .score-val {
+            text-shadow: 0 0 20px rgba(168, 85, 247, 0.3);
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-10">
+
+    <!-- Splash Screen Dames -->
+    <div id="splash-screen" class="fixed inset-0 z-[100] bg-[#0f172a] flex flex-col items-center justify-center transition-opacity duration-700">
+        <div class="relative h-40 w-40 flex items-center justify-center animate-checker">
+            <!-- Halo -->
+            <div class="absolute inset-0 bg-purple-500/20 blur-3xl rounded-full animate-pulse"></div>
+            <!-- Icône de pion de dames SVG -->
+            <svg viewBox="0 0 512 512" class="w-32 h-32 fill-purple-500 drop-shadow-[0_0_15px_rgba(168,85,247,0.5)]">
+                <path d="M256 0C114.6 0 0 114.6 0 256s114.6 256 256 256s256-114.6 256-256S397.4 0 256 0zM256 464c-114.7 0-208-93.31-208-208S141.3 48 256 48s208 93.31 208 208S370.7 464 256 464zM256 96c-88.37 0-160 71.63-160 160s71.63 160 160 160s160-71.63 160-160S344.4 96 256 96zM256 368c-61.85 0-112-50.15-112-112s50.15-112 112-112s112 50.15 112 112S317.9 368 256 368z"/>
+            </svg>
+        </div>
+        
+        <h2 class="mt-8 text-2xl font-bold uppercase tracking-[0.3em] text-white">Réflexion...</h2>
+        
+        <div class="mt-6 w-48 h-1 bg-slate-800 rounded-full overflow-hidden relative border border-white/5">
+            <div class="loading-progress"></div>
+        </div>
+    </div>
+
+    <div class="container mx-auto px-4 pt-8 max-w-lg">
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-8">
+            <a href="index.html" class="text-slate-400 hover:text-white transition-colors flex items-center gap-2">
+                <i class="fa-solid fa-arrow-left"></i> Retour
+            </a>
+            <h1 class="text-2xl font-bold text-white tracking-tight">Dames 🏆</h1>
+            <button onclick="confirmReset()" class="text-slate-500 hover:text-red-400 transition-colors">
+                <i class="fa-solid fa-rotate-right"></i>
+            </button>
+        </div>
+
+        <!-- Configuration Section -->
+        <div id="setup-section" class="glass p-8 rounded-[2.5rem] mb-8">
+            <h2 class="text-xl font-bold mb-6 flex items-center gap-2">
+                <i class="fa-solid fa-chess-board text-purple-400"></i> Les adversaires
+            </h2>
+            <div class="space-y-4 mb-8">
+                <div>
+                    <label class="text-[10px] uppercase tracking-widest text-slate-500 font-bold ml-2">Joueur Blanc</label>
+                    <input type="text" id="name-p1" placeholder="Nom..."
+                           class="w-full bg-slate-800/50 border border-slate-700 rounded-2xl px-4 py-4 mt-1 focus:outline-none focus:ring-2 focus:ring-purple-500/50 text-white transition-all">
+                </div>
+                <div>
+                    <label class="text-[10px] uppercase tracking-widest text-slate-500 font-bold ml-2">Joueur Noir</label>
+                    <input type="text" id="name-p2" placeholder="Nom..."
+                           class="w-full bg-slate-800/50 border border-slate-700 rounded-2xl px-4 py-4 mt-1 focus:outline-none focus:ring-2 focus:ring-purple-500/50 text-white transition-all">
+                </div>
+            </div>
+            <button onclick="startGame()" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-5 rounded-2xl shadow-lg transition-all active:scale-95">
+                Ouvrir le plateau
+            </button>
+        </div>
+
+        <!-- Game Section -->
+        <div id="game-section" class="hidden">
+            <div class="grid grid-cols-2 gap-4 mb-8">
+                <!-- Joueur 1 -->
+                <button onclick="addPoint(1)" class="player-card glass p-6 rounded-[2.5rem] flex flex-col items-center gap-4 active:scale-95 border-b-4 border-slate-400">
+                    <span id="display-name-p1" class="text-slate-400 font-semibold uppercase text-[10px] tracking-widest truncate w-full text-center">Joueur 1</span>
+                    <span id="score-1" class="text-6xl font-black score-val">0</span>
+                    <div class="bg-white/10 text-white px-4 py-1 rounded-full text-[10px] font-bold">VICTOIRE</div>
+                </button>
+
+                <!-- Joueur 2 -->
+                <button onclick="addPoint(2)" class="player-card glass p-6 rounded-[2.5rem] flex flex-col items-center gap-4 active:scale-95 border-b-4 border-slate-900">
+                    <span id="display-name-p2" class="text-slate-400 font-semibold uppercase text-[10px] tracking-widest truncate w-full text-center">Joueur 2</span>
+                    <span id="score-2" class="text-6xl font-black score-val">0</span>
+                    <div class="bg-black/20 text-slate-300 px-4 py-1 rounded-full text-[10px] font-bold">VICTOIRE</div>
+                </button>
+            </div>
+
+            <!-- Historique des victoires -->
+            <div class="glass rounded-3xl p-6">
+                <h3 class="font-bold text-slate-300 flex items-center gap-2 mb-4">
+                    <i class="fa-solid fa-trophy text-amber-400 text-sm"></i> Palmarès du match
+                </h3>
+                <div id="log" class="text-center py-6 text-slate-500 text-sm italic">
+                    Aucune victoire enregistrée
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Splash screen logic
+        window.onload = function() {
+            const splash = document.getElementById('splash-screen');
+            setTimeout(() => {
+                splash.style.opacity = '0';
+                setTimeout(() => splash.remove(), 700);
+            }, 1500);
+        };
+
+        let scores = { 1: 0, 2: 0 };
+        let playerNames = { 1: "Joueur 1", 2: "Joueur 2" };
+
+        function startGame() {
+            const p1 = document.getElementById('name-p1').value.trim() || "Joueur 1";
+            const p2 = document.getElementById('name-p2').value.trim() || "Joueur 2";
+            
+            playerNames[1] = p1;
+            playerNames[2] = p2;
+            
+            document.getElementById('display-name-p1').textContent = p1;
+            document.getElementById('display-name-p2').textContent = p2;
+            
+            document.getElementById('setup-section').classList.add('hidden');
+            document.getElementById('game-section').classList.remove('hidden');
+        }
+
+        function addPoint(playerNum) {
+            scores[playerNum]++;
+            const scoreEl = document.getElementById(`score-${playerNum}`);
+            scoreEl.textContent = scores[playerNum];
+            
+            // Animation sur le score
+            scoreEl.classList.add('scale-125', 'text-purple-400');
+            setTimeout(() => scoreEl.classList.remove('scale-125', 'text-purple-400'), 300);
+
+            // Log
+            document.getElementById('log').innerHTML = `
+                <div class="flex items-center justify-center gap-2 text-white animate-bounce">
+                    <i class="fa-solid fa-crown text-amber-400"></i>
+                    Dernière manche : <strong>${playerNames[playerNum]}</strong>
+                </div>
+            `;
+
+            if (navigator.vibrate) navigator.vibrate(50);
+        }
+
+        function confirmReset() {
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 flex items-center justify-center bg-black/90 z-[100] px-4';
+            modal.innerHTML = `
+                <div class="glass p-8 rounded-[2rem] max-w-sm w-full text-center">
+                    <div class="w-16 h-16 bg-purple-500/20 text-purple-400 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
+                        <i class="fa-solid fa-rotate"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-2">Réinitialiser ?</h3>
+                    <p class="text-slate-400 text-sm mb-6">Effacer les noms et les scores du duel.</p>
+                    <div class="flex gap-4">
+                        <button id="cancel-reset" class="flex-1 bg-slate-700 py-3 rounded-xl font-semibold">Non</button>
+                        <button id="confirm-reset" class="flex-1 bg-purple-600 py-3 rounded-xl font-semibold text-white">Oui</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            
+            document.getElementById('cancel-reset').onclick = () => modal.remove();
+            document.getElementById('confirm-reset').onclick = () => location.reload();
+        }
+    </script>
+</body>
+</html>
