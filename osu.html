@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Neon Aim Mobile 🎯</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;900&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            font-family: 'Outfit', sans-serif; background: #020617; color: #f8fafc; 
+            overflow: hidden; height: 100vh; margin: 0; touch-action: none; 
+            -webkit-tap-highlight-color: transparent; user-select: none;
+        }
+        #game-area { position: relative; width: 100%; height: 100vh; background: radial-gradient(circle at 50% 50%, #0f172a 0%, #020617 100%); }
+        
+        .target {
+            position: absolute; border-radius: 50%; border: 5px solid #6366f1;
+            background: rgba(99, 102, 241, 0.15); box-shadow: 0 0 25px rgba(99, 102, 241, 0.4);
+            display: flex; align-items: center; justify-content: center; z-index: 10;
+            transform: scale(0); animation: spawn 0.1s cubic-bezier(0, 0, 0.2, 1) forwards;
+        }
+        .approach-circle {
+            position: absolute; width: 100%; height: 100%; border: 3px solid rgba(255, 255, 255, 0.6);
+            border-radius: 50%; pointer-events: none;
+        }
+        @keyframes spawn { to { transform: scale(1); } }
+        @keyframes shrink { from { transform: scale(2.2); } to { transform: scale(0.9); } }
+
+        .ripple {
+            position: absolute; border-radius: 50%; background: rgba(255, 255, 255, 0.4);
+            transform: scale(0); animation: ripple-effect 0.3s ease-out; pointer-events: none;
+        }
+        @keyframes ripple-effect { to { transform: scale(2.5); opacity: 0; } }
+
+        .miss-flash {
+            position: absolute; inset: 0; background: rgba(239, 68, 68, 0.2);
+            pointer-events: none; opacity: 0; z-index: 100; transition: opacity 0.1s;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="miss-overlay" class="miss-flash"></div>
+
+    <div id="start-menu" class="fixed inset-0 bg-slate-950 z-[300] flex flex-col items-center justify-center p-6 text-center">
+        <div class="w-24 h-24 bg-indigo-600/20 rounded-full flex items-center justify-center mb-6 border border-indigo-500/30">
+            <i class="fa-solid fa-bullseye text-4xl text-indigo-500"></i>
+        </div>
+        <h1 class="text-5xl font-black text-white mb-2 italic tracking-tighter">NEON AIM</h1>
+        <p class="text-slate-400 text-sm mb-12 max-w-xs uppercase tracking-widest">Détruis les cibles avant qu'elles ne disparaissent.</p>
+        
+        <div class="flex flex-col gap-4 w-64">
+            <button onclick="startGame()" class="bg-indigo-600 text-white w-full py-5 rounded-3xl font-black text-xl shadow-[0_0_30px_rgba(99,102,241,0.3)] active:scale-95 transition-all">
+                DÉMARRER
+            </button>
+            <a href="index.html" class="text-slate-500 font-bold py-2 active:text-white transition-colors">RETOUR</a>
+        </div>
+    </div>
+
+    <div id="hud" class="fixed top-0 left-0 w-full p-6 flex justify-between items-start z-50 pointer-events-none hidden">
+        <div class="flex gap-4 items-start">
+            <a href="index.html" class="pointer-events-auto bg-white/10 w-12 h-12 rounded-2xl flex items-center justify-center backdrop-blur-md border border-white/10 active:scale-90 transition-all">
+                <i class="fa-solid fa-house text-white"></i>
+            </a>
+            <div>
+                <div id="score" class="text-5xl font-black text-white italic leading-none">0</div>
+                <div id="combo-tag" class="text-indigo-400 font-bold text-sm mt-1 opacity-0 transition-opacity uppercase">Combo 1x</div>
+            </div>
+        </div>
+        <div class="flex gap-2" id="lives-container">
+            <i class="fa-solid fa-heart text-xl text-red-600"></i>
+            <i class="fa-solid fa-heart text-xl text-red-600"></i>
+            <i class="fa-solid fa-heart text-xl text-red-600"></i>
+        </div>
+    </div>
+
+    <div id="game-area"></div>
+
+    <div id="game-over" class="fixed inset-0 bg-slate-950/98 backdrop-blur-md flex flex-col items-center justify-center z-[200] hidden">
+        <div class="text-indigo-500 font-black tracking-[0.3em] mb-4 uppercase text-sm">Session terminée</div>
+        <div class="text-7xl font-black text-white mb-12" id="final-score">0</div>
+        
+        <div class="flex flex-col gap-4 w-64">
+            <button onclick="location.reload()" class="bg-indigo-600 text-white w-full py-5 rounded-full font-black text-xl shadow-2xl active:scale-95 transition-transform">
+                REJOUER
+            </button>
+            <a href="index.html" class="bg-white/5 border border-white/10 text-white w-full py-4 rounded-full font-bold text-center active:scale-95 transition-transform">
+                MENU PRINCIPAL
+            </a>
+        </div>
+    </div>
+
+    <script>
+        let score = 0, lives = 3, combo = 0, gameActive = false;
+        let spawnRate = 1400, targetLifetime = 2000;
+        
+        const gameArea = document.getElementById('game-area');
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playTone(freq, type, dur) {
+            const osc = audioCtx.createOscillator();
+            const g = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.value = freq;
+            g.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + dur);
+            osc.connect(g); g.connect(audioCtx.destination);
+            osc.start(); osc.stop(audioCtx.currentTime + dur);
+        }
+
+        function startGame() {
+            document.getElementById('start-menu').classList.add('hidden');
+            document.getElementById('hud').classList.remove('hidden');
+            gameActive = true;
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            setTimeout(createTarget, 500);
+        }
+
+        function createTarget() {
+            if (!gameActive) return;
+
+            const target = document.createElement('div');
+            const size = Math.max(65, 100 - (score / 35));
+            const x = Math.random() * (window.innerWidth - size - 60) + 30;
+            const y = Math.random() * (window.innerHeight - size - 180) + 120;
+
+            target.className = 'target';
+            target.style.width = size + 'px';
+            target.style.height = size + 'px';
+            target.style.left = x + 'px';
+            target.style.top = y + 'px';
+
+            const approach = document.createElement('div');
+            approach.className = 'approach-circle';
+            approach.style.animation = `shrink ${targetLifetime}ms linear forwards`;
+            target.appendChild(approach);
+
+            const hitEvent = (e) => { e.preventDefault(); e.stopPropagation(); hit(target); };
+            target.ontouchstart = hitEvent;
+            target.onmousedown = hitEvent;
+
+            gameArea.appendChild(target);
+
+            const failTimer = setTimeout(() => {
+                if (target.parentNode) { target.remove(); miss(); }
+            }, targetLifetime);
+            target.dataset.timer = failTimer;
+
+            const next = Math.max(450, spawnRate - (score * 1.3));
+            setTimeout(createTarget, next);
+        }
+
+        function hit(el) {
+            clearTimeout(el.dataset.timer);
+            combo++;
+            score += (10 * combo);
+            playTone(300 + (combo * 20), 'sine', 0.1);
+            
+            const rip = document.createElement('div');
+            rip.className = 'ripple';
+            rip.style.width = el.style.width; rip.style.height = el.style.height;
+            rip.style.left = el.style.left; rip.style.top = el.style.top;
+            gameArea.appendChild(rip);
+            setTimeout(() => rip.remove(), 300);
+
+            updateHUD();
+            el.remove();
+        }
+
+        function miss() {
+            combo = 0;
+            lives--;
+            playTone(120, 'square', 0.2);
+            
+            const overlay = document.getElementById('miss-overlay');
+            overlay.style.opacity = '1';
+            setTimeout(() => overlay.style.opacity = '0', 100);
+
+            updateHUD();
+            if (lives <= 0) gameOver();
+        }
+
+        function updateHUD() {
+            document.getElementById('score').innerText = score;
+            const comboTag = document.getElementById('combo-tag');
+            if (combo > 1) {
+                comboTag.innerText = `COMBO ${combo}x`;
+                comboTag.style.opacity = '1';
+            } else { comboTag.style.opacity = '0'; }
+
+            const hearts = document.querySelectorAll('#lives-container i');
+            hearts.forEach((h, i) => { h.style.opacity = i < lives ? '1' : '0.2'; });
+        }
+
+        function gameOver() {
+            gameActive = false;
+            document.getElementById('game-over').classList.remove('hidden');
+            document.getElementById('final-score').innerText = score;
+        }
+
+        gameArea.ontouchstart = (e) => { if(gameActive && e.target === gameArea) miss(); };
+
+        const style = document.createElement('style');
+        style.innerHTML = `@keyframes shrink { from { transform: scale(2.2); } to { transform: scale(0.9); } }`;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>

@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Blackjack Duel - Casino 🃏</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: #020617;
+            color: #f8fafc;
+            min-height: 100vh;
+        }
+        .glass {
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .card-visual {
+            width: 50px;
+            height: 75px;
+            background: linear-gradient(135deg, #ffffff 0%, #e2e8f0 100%);
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            animation: deal 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            border: 1px solid #94a3b8;
+        }
+        .card-back { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 2px solid #334155; }
+        @keyframes deal { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .player-active { border: 2px solid #6366f1 !important; transform: scale(1.02); }
+        .token-ui { background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); }
+    </style>
+</head>
+<body class="p-4">
+
+    <div class="max-w-md mx-auto flex items-center justify-between mb-4 pt-2">
+        <a href="index.html" class="w-10 h-10 glass rounded-full flex items-center justify-center text-slate-400">
+            <i class="fa-solid fa-arrow-left text-sm"></i>
+        </a>
+        <h1 class="text-lg font-bold tracking-tight">BLACKJACK <span class="text-emerald-400">DUEL</span></h1>
+        <div class="w-10"></div>
+    </div>
+
+    <div class="max-w-2xl mx-auto space-y-4">
+        
+        <div class="glass p-4 rounded-[2rem] text-center">
+            <div class="flex justify-between items-center mb-3 opacity-50 px-4">
+                <span class="text-[10px] font-bold uppercase tracking-widest">Croupier</span>
+                <span id="dealer-score" class="text-xs font-bold bg-slate-800 px-2 py-0.5 rounded">0</span>
+            </div>
+            <div id="dealer-cards" class="flex justify-center gap-2 min-h-[75px]"></div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div id="p1-zone" class="glass p-5 rounded-[2.5rem] transition-all border-2 border-transparent">
+                <div class="flex justify-between items-start mb-3">
+                    <div>
+                        <input type="text" id="p1-name" value="Joueur 1" class="bg-transparent font-bold w-24 text-sm focus:outline-none">
+                        <div class="flex items-center gap-1 mt-1 text-amber-500 font-bold text-sm">
+                            <i class="fa-solid fa-coins text-[10px]"></i> <span id="p1-wallet">100</span>
+                        </div>
+                    </div>
+                    <span id="p1-score" class="bg-indigo-500/20 text-indigo-400 px-3 py-1 rounded-full text-xs font-bold">0</span>
+                </div>
+                <div id="p1-cards" class="flex justify-center gap-2 min-h-[75px] mb-4"></div>
+                <div id="p1-controls" class="grid grid-cols-2 gap-2 hidden">
+                    <button onclick="hit(0)" class="bg-emerald-500 py-3 rounded-xl font-bold text-xs uppercase">Tirer</button>
+                    <button onclick="stand(0)" class="bg-slate-700 py-3 rounded-xl font-bold text-xs uppercase">Rester</button>
+                    <button id="p1-fold" onclick="fold(0)" class="col-span-2 bg-red-500/10 text-red-400 py-2 rounded-xl font-bold text-[10px] uppercase border border-red-500/20">Se Coucher (+5)</button>
+                </div>
+            </div>
+
+            <div id="p2-zone" class="glass p-5 rounded-[2.5rem] transition-all border-2 border-transparent">
+                <div class="flex justify-between items-start mb-3">
+                    <div>
+                        <input type="text" id="p2-name" value="Joueur 2" class="bg-transparent font-bold w-24 text-sm focus:outline-none">
+                        <div class="flex items-center gap-1 mt-1 text-pink-500 font-bold text-sm">
+                            <i class="fa-solid fa-coins text-[10px]"></i> <span id="p2-wallet">100</span>
+                        </div>
+                    </div>
+                    <span id="p2-score" class="bg-pink-500/20 text-pink-400 px-3 py-1 rounded-full text-xs font-bold">0</span>
+                </div>
+                <div id="p2-cards" class="flex justify-center gap-2 min-h-[75px] mb-4"></div>
+                <div id="p2-controls" class="grid grid-cols-2 gap-2 hidden">
+                    <button onclick="hit(1)" class="bg-emerald-500 py-3 rounded-xl font-bold text-xs uppercase">Tirer</button>
+                    <button onclick="stand(1)" class="bg-slate-700 py-3 rounded-xl font-bold text-xs uppercase">Rester</button>
+                    <button id="p2-fold" onclick="fold(1)" class="col-span-2 bg-red-500/10 text-red-400 py-2 rounded-xl font-bold text-[10px] uppercase border border-red-500/20">Se Coucher (-5)</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="menu" class="glass p-8 rounded-[3rem] text-center">
+            <h2 class="text-xl font-bold mb-6">Prêt pour le duel ?</h2>
+            <div class="flex flex-col gap-3">
+                <button onclick="startNewGame(1)" class="bg-indigo-600 py-4 rounded-2xl font-bold">MODE SOLO</button>
+                <button onclick="startNewGame(2)" class="bg-slate-800 py-4 rounded-2xl font-bold">MODE DUO</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="overlay" class="fixed inset-0 bg-black/90 z-50 hidden flex items-center justify-center p-6">
+        <div class="glass p-8 rounded-[3rem] w-full max-w-sm text-center">
+            <div id="result-icon" class="text-5xl mb-4">👑</div>
+            <h2 id="result-title" class="text-2xl font-bold mb-4">Résultat</h2>
+            <div id="result-text" class="text-slate-300 mb-8 space-y-3"></div>
+            <button id="btn-action" onclick="replayManche()" class="w-full bg-indigo-500 py-4 rounded-2xl font-extrabold shadow-lg">MANCHE SUIVANTE</button>
+        </div>
+    </div>
+
+    <script>
+        const suits = ['♠', '♣', '♥', '♦'];
+        const values = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+        let deck = [];
+        let players = [];
+        let dealer = { cards: [], score: 0 };
+        let currentPlayerIndex = 0;
+        let gameMode = 1;
+        let wallets = [100, 100]; // Portefeuilles séparés
+
+        function createDeck() {
+            deck = [];
+            for (let s of suits) for (let v of values) deck.push({ suit: s, value: v });
+            deck = deck.sort(() => Math.random() - 0.5);
+        }
+
+        function calculateScore(cards) {
+            let score = 0, aces = 0;
+            for (let c of cards) {
+                if (c.value === 'A') { aces++; score += 11; }
+                else if (['J', 'Q', 'K'].includes(c.value)) score += 10;
+                else score += parseInt(c.value);
+            }
+            while (score > 21 && aces > 0) { score -= 10; aces--; }
+            return score;
+        }
+
+        function renderCard(card, hidden = false) {
+            if (hidden) return `<div class="card-visual card-back"><i class="fa-solid fa-clover text-slate-700 text-xs"></i></div>`;
+            const color = (card.suit === '♥' || card.suit === '♦') ? 'text-red-500' : 'text-slate-900';
+            return `<div class="card-visual">
+                <span class="absolute top-1 left-1 text-[10px] font-bold text-black">${card.value}</span>
+                <span class="${color} text-xl">${card.suit}</span>
+            </div>`;
+        }
+
+        function startNewGame(mode) {
+            gameMode = mode;
+            wallets = [100, 100]; // Reset des banques pour une nouvelle partie
+            document.getElementById('menu').classList.add('hidden');
+            if (mode === 1) document.getElementById('p2-zone').style.display = 'none';
+            replayManche();
+        }
+
+        function replayManche() {
+            // Vérification Ruine
+            if (wallets[0] <= 0 || (gameMode === 2 && wallets[1] <= 0)) {
+                location.reload(); 
+                return;
+            }
+
+            createDeck();
+            document.getElementById('overlay').classList.add('hidden');
+            
+            // Miser 10 pièces par joueur
+            wallets[0] -= 10;
+            if(gameMode === 2) wallets[1] -= 10;
+
+            players = [];
+            for(let i=0; i<gameMode; i++) {
+                players.push({ cards: [deck.pop(), deck.pop()], status: 'playing', folded: false });
+            }
+            dealer = { cards: [deck.pop(), deck.pop()], score: 0 };
+            currentPlayerIndex = 0;
+            updateUI();
+            startTurn();
+        }
+
+        function updateUI() {
+            document.getElementById('p1-wallet').innerText = wallets[0];
+            document.getElementById('p1-cards').innerHTML = players[0].cards.map(c => renderCard(c)).join('');
+            document.getElementById('p1-score').innerText = calculateScore(players[0].cards);
+            
+            if(gameMode === 2) {
+                document.getElementById('p2-wallet').innerText = wallets[1];
+                document.getElementById('p2-cards').innerHTML = players[1].cards.map(c => renderCard(c)).join('');
+                document.getElementById('p2-score').innerText = calculateScore(players[1].cards);
+            }
+
+            const allDone = players.every(p => p.status !== 'playing');
+            if(!allDone) {
+                document.getElementById('dealer-cards').innerHTML = renderCard(dealer.cards[0]) + renderCard(null, true);
+                document.getElementById('dealer-score').innerText = "?";
+            } else {
+                document.getElementById('dealer-cards').innerHTML = dealer.cards.map(c => renderCard(c)).join('');
+                document.getElementById('dealer-score').innerText = calculateScore(dealer.cards);
+            }
+        }
+
+        function startTurn() {
+            if (currentPlayerIndex >= gameMode) {
+                dealerPlay();
+                return;
+            }
+            document.getElementById('p1-controls').classList.toggle('hidden', currentPlayerIndex !== 0);
+            document.getElementById('p2-controls').classList.toggle('hidden', currentPlayerIndex !== 1);
+            
+            const foldBtn = document.getElementById(`p${currentPlayerIndex+1}-fold`);
+            foldBtn.classList.toggle('hidden', players[currentPlayerIndex].cards.length !== 2);
+
+            document.getElementById('p1-zone').classList.toggle('player-active', currentPlayerIndex === 0);
+            document.getElementById('p2-zone').classList.toggle('player-active', currentPlayerIndex === 1);
+        }
+
+        function hit(idx) {
+            players[idx].cards.push(deck.pop());
+            updateUI();
+            startTurn();
+            if (calculateScore(players[idx].cards) >= 21) stand(idx);
+        }
+
+        function stand(idx) {
+            players[idx].status = 'finished';
+            currentPlayerIndex++;
+            startTurn();
+        }
+
+        function fold(idx) {
+            players[idx].folded = true;
+            players[idx].status = 'finished';
+            wallets[idx] += 5; // Remboursement partiel
+            
+            if (currentPlayerIndex === gameMode - 1) {
+                if (gameMode === 1 || players.every(p => p.folded)) {
+                    checkWinner();
+                    return;
+                }
+            }
+            currentPlayerIndex++;
+            startTurn();
+        }
+
+        async function dealerPlay() {
+            if (players.every(p => p.folded)) { checkWinner(); return; }
+            document.getElementById('p1-controls').classList.add('hidden');
+            document.getElementById('p2-controls').classList.add('hidden');
+            updateUI();
+            let dScore = calculateScore(dealer.cards);
+            while (dScore < 17) {
+                await new Promise(r => setTimeout(r, 800));
+                dealer.cards.push(deck.pop());
+                dScore = calculateScore(dealer.cards);
+                updateUI();
+            }
+            setTimeout(checkWinner, 500);
+        }
+
+        function checkWinner() {
+            const dScore = calculateScore(dealer.cards);
+            let results = [];
+            let gameOver = false;
+
+            players.forEach((p, i) => {
+                const name = document.getElementById(`p${i+1}-name`).value;
+                const pScore = calculateScore(p.cards);
+                let resTxt = "";
+
+                if (p.folded) resTxt = `<span class="text-orange-400">COUCHÉ (-5)</span>`;
+                else if (pScore > 21) resTxt = `<span class="text-red-400">PERDU (-10)</span>`;
+                else if (dScore > 21 || pScore > dScore) {
+                    resTxt = `<span class="text-emerald-400">GAGNÉ (+10)</span>`;
+                    wallets[i] += 20;
+                } else if (pScore === dScore) {
+                    resTxt = `<span class="text-slate-400">ÉGALITÉ (0)</span>`;
+                    wallets[i] += 10;
+                } else resTxt = `<span class="text-red-400">PERDU (-10)</span>`;
+                
+                results.push(`<div class="flex justify-between text-sm"><span>${name}</span>${resTxt}</div>`);
+            });
+
+            // Vérification de la ruine d'un joueur
+            if (wallets[0] <= 0) {
+                results.push(`<div class="mt-4 text-red-500 font-bold uppercase">💀 ${document.getElementById('p1-name').value} est ruiné !</div>`);
+                if(gameMode === 2) results.push(`<div class="text-emerald-400 font-bold">🏆 ${document.getElementById('p2-name').value} GAGNE LA PARTIE !</div>`);
+                gameOver = true;
+            } else if (gameMode === 2 && wallets[1] <= 0) {
+                results.push(`<div class="mt-4 text-red-500 font-bold uppercase">💀 ${document.getElementById('p2-name').value} est ruiné !</div>`);
+                results.push(`<div class="text-emerald-400 font-bold">🏆 ${document.getElementById('p1-name').value} GAGNE LA PARTIE !</div>`);
+                gameOver = true;
+            }
+
+            const overlay = document.getElementById('overlay');
+            document.getElementById('result-text').innerHTML = results.join('');
+            document.getElementById('btn-action').innerText = gameOver ? "NOUVELLE PARTIE" : "MANCHE SUIVANTE";
+            overlay.classList.remove('hidden');
+            updateUI();
+        }
+    </script>
+</body>
+</html>
