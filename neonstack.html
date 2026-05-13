@@ -30,7 +30,7 @@
             
             <div class="flex flex-col gap-3 w-full px-8">
                 <button id="startBtn" class="bg-purple-600 text-white w-full py-4 rounded-2xl font-black shadow-lg shadow-purple-600/40 active:scale-95 transition-all uppercase italic text-lg">Démarrer</button>
-                <a href="index.html" class="glass text-slate-300 w-full py-3 rounded-2xl font-bold active:scale-95 transition-all uppercase tracking-tight text-sm flex items-center justify-center gap-2">
+                <a href="index.html" id="homeBtn" class="glass text-slate-300 w-full py-3 rounded-2xl font-bold active:scale-95 transition-all uppercase tracking-tight text-sm flex items-center justify-center gap-2">
                     <i class="fa-solid fa-house text-xs"></i> Accueil
                 </a>
             </div>
@@ -55,7 +55,6 @@
     let currentBlock = null;
     const blockHeight = 35;
 
-    // AUDIO ENGINE
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     let audioCtx = null;
 
@@ -130,7 +129,7 @@
         score++;
         scoreDisplay.innerText = score;
         
-        playSound('stack'); // <--- AJOUT SON
+        playSound('stack');
         if (navigator.vibrate) navigator.vibrate(15);
         spawnBlock();
     }
@@ -170,7 +169,7 @@
 
     function endGame() {
         gameActive = false;
-        playSound('gameOver'); // <--- AJOUT SON
+        playSound('gameOver');
         document.getElementById('title').innerText = "Broken !";
         document.getElementById('msg').innerText = `Score : ${score}`;
         overlay.classList.remove('hidden');
@@ -187,14 +186,20 @@
     };
 
     window.addEventListener('mousedown', (e) => {
-        if (e.target.id !== 'startBtn') handleInput();
+        // Ne pas déclencher si on clique sur un bouton ou un lien
+        if (e.target.closest('button') || e.target.closest('a')) return;
+        handleInput();
     });
     
     window.addEventListener('touchstart', (e) => {
-        if (e.target.id !== 'startBtn') {
-            e.preventDefault();
-            handleInput();
+        // Si on touche un bouton ou un lien, on laisse le comportement normal
+        if (e.target.closest('button') || e.target.closest('a')) {
+            return; 
         }
+        
+        // Sinon, c'est une action de jeu : on bloque le scroll et on joue
+        e.preventDefault();
+        handleInput();
     }, { passive: false });
 
     init();
