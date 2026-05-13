@@ -39,6 +39,48 @@
     </div>
 
     <script>
+        // --- AUDIO ENGINE ---
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        let audioCtx = null;
+
+        function playSound(type) {
+            if (!audioCtx) audioCtx = new AudioCtx();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            const now = audioCtx.currentTime;
+
+            if (type === 'correct') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(400 + (userChoices.length * 50), now);
+                osc.frequency.exponentialRampToValueAtTime(800 + (userChoices.length * 50), now + 0.1);
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                osc.start(); osc.stop(now + 0.2);
+            } else if (type === 'wrong') {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(150, now);
+                osc.frequency.linearRampToValueAtTime(50, now + 0.4);
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.4);
+                osc.start(); osc.stop(now + 0.4);
+            } else if (type === 'win') {
+                [523.25, 659.25, 783.99, 1046.50].forEach((f, i) => {
+                    const o = audioCtx.createOscillator();
+                    const g = audioCtx.createGain();
+                    o.type = 'square';
+                    o.connect(g); g.connect(audioCtx.destination);
+                    o.frequency.setValueAtTime(f, now + i*0.1);
+                    g.gain.setValueAtTime(0.05, now + i*0.1);
+                    g.gain.exponentialRampToValueAtTime(0.01, now + i*0.1 + 0.3);
+                    o.start(now + i*0.1); o.stop(now + i*0.1 + 0.3);
+                });
+            }
+        }
+
         const canvas = document.getElementById('recallCanvas');
         const ctx = canvas.getContext('2d');
         const overlay = document.getElementById('overlay');
@@ -56,21 +98,15 @@
         let gameActive = false;
 
         function initLevel() {
-            // La grille s'agrandit tous les 2 niveaux (max 10x10)
+            if (!audioCtx) audioCtx = new AudioCtx(); // Init au premier clic
             gridSize = Math.min(10, 3 + Math.floor((level - 1) / 2));
-            
-            // Nombre de cases : commence à 3, augmente avec le niveau, mais bloqué à 10 maximum
             let numTiles = Math.min(10, 2 + level); 
-            
             targets = [];
             userChoices = [];
-            
-            // Générer des cibles uniques dans la grille actuelle
             while(targets.length < numTiles) {
                 let r = Math.floor(Math.random() * (gridSize * gridSize));
                 if(!targets.includes(r)) targets.push(r);
             }
-
             overlay.classList.add('hidden');
             lvlDisplay.innerText = "Niveau " + level;
             startMemorization();
@@ -79,46 +115,35 @@
         async function startMemorization() {
             isMemorizing = true;
             gameActive = false;
-            
-            // Animation de la barre de timer (3 secondes)
             timerFill.style.transition = "none";
             timerFill.style.width = "100%";
             setTimeout(() => {
                 timerFill.style.transition = "width 3s linear";
                 timerFill.style.width = "0%";
             }, 50);
-
-            draw(true); // On dessine toutes les cibles
-
+            draw(true);
             await new Promise(r => setTimeout(r, 3000));
-            
             isMemorizing = false;
             gameActive = true;
-            draw(); // On efface tout
+            draw();
         }
 
         function draw(showTargets = false) {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             const padding = 10;
             const tileSize = (canvas.width - padding * 2) / gridSize;
-
             for(let i = 0; i < gridSize * gridSize; i++) {
                 const x = padding + (i % gridSize) * tileSize;
                 const y = padding + Math.floor(i / gridSize) * tileSize;
-
                 ctx.strokeStyle = "rgba(34, 211, 238, 0.1)";
                 ctx.lineWidth = 1.5;
                 ctx.strokeRect(x + 2, y + 2, tileSize - 4, tileSize - 4);
-
-                // Affichage pendant la phase de mémorisation
                 if(showTargets && targets.includes(i)) {
                     ctx.fillStyle = "#22d3ee";
                     ctx.shadowBlur = 15; ctx.shadowColor = "#22d3ee";
                     ctx.fillRect(x + 5, y + 5, tileSize - 10, tileSize - 10);
                     ctx.shadowBlur = 0;
                 }
-                
-                // Affichage des sélections de l'utilisateur
                 if(userChoices.includes(i)) {
                     const isCorrect = targets.includes(i);
                     ctx.fillStyle = isCorrect ? "rgba(34, 211, 238, 0.7)" : "#f43f5e";
@@ -129,21 +154,16 @@
 
         function handleClick(e) {
             if(!gameActive || isMemorizing) return;
-
             const rect = canvas.getBoundingClientRect();
             const clientX = e.touches ? e.touches[0].clientX : e.clientX;
             const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-            
             const mouseX = (clientX - rect.left) * (canvas.width / rect.width);
             const mouseY = (clientY - rect.top) * (canvas.height / rect.height);
-
             const padding = 10;
             const tileSize = (canvas.width - padding * 2) / gridSize;
-            
             const col = Math.floor((mouseX - padding) / tileSize);
             const row = Math.floor((mouseY - padding) / tileSize);
             const id = row * gridSize + col;
-
             if(col >= 0 && col < gridSize && row >= 0 && row < gridSize) {
                 if(!userChoices.includes(id)) checkChoice(id);
             }
@@ -152,12 +172,13 @@
         function checkChoice(id) {
             if(targets.includes(id)) {
                 userChoices.push(id);
+                playSound('correct'); // SON CASE CORRECTE
                 if (navigator.vibrate) navigator.vibrate(20);
                 draw();
-
                 if(userChoices.length === targets.length) {
                     gameActive = false;
                     setTimeout(() => {
+                        playSound('win'); // SON VICTOIRE MANCHE
                         level++;
                         document.getElementById('title').innerText = "Signal Capturé";
                         document.getElementById('msg').innerText = "La grille s'agrandit...";
@@ -165,7 +186,8 @@
                     }, 500);
                 }
             } else {
-                userChoices.push(id); // Pour montrer l'erreur en rouge
+                userChoices.push(id); 
+                playSound('wrong'); // SON ERREUR
                 draw();
                 gameOver();
             }

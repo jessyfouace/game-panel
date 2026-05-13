@@ -17,7 +17,9 @@
 <body class="py-10 px-4">
 
     <div class="w-full max-w-md flex items-center justify-between mb-8">
-        <a href="index.html" class="w-10 h-10 glass rounded-xl flex items-center justify-center text-slate-400"><i class="fa-solid fa-arrow-left"></i></a>
+        <a href="index.html" class="w-10 h-10 glass rounded-xl flex items-center justify-center text-slate-400 relative z-50">
+            <i class="fa-solid fa-arrow-left"></i>
+        </a>
         <div class="flex gap-3">
             <div class="glass px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest text-slate-400">
                 Level <span id="lvl-display" class="text-white text-lg ml-1">1</span>
@@ -30,7 +32,7 @@
         <div id="overlay" class="absolute inset-0 flex flex-col items-center justify-center text-center p-6 z-50 glass rounded-[1.5rem]">
             <h2 id="title" class="text-3xl font-black mb-2 text-cyan-400 uppercase italic">Neon Path</h2>
             <p id="msg" class="text-slate-400 mb-8 text-sm">Relie le <span class="text-cyan-400 font-bold">Bleu</span> au <span class="text-purple-500 font-bold">Violet</span> sans t'arrêter !</p>
-            <button onclick="initLevel()" class="bg-cyan-500 text-slate-900 px-12 py-4 rounded-2xl font-black shadow-lg shadow-cyan-500/30 active:scale-95 transition-all uppercase italic">Tracer le chemin</button>
+            <button id="start-btn" class="bg-cyan-500 text-slate-900 px-12 py-4 rounded-2xl font-black shadow-lg shadow-cyan-500/30 active:scale-95 transition-all uppercase italic">Tracer le chemin</button>
         </div>
     </div>
 
@@ -38,8 +40,9 @@
     const canvas = document.getElementById('pathCanvas');
     const ctx = canvas.getContext('2d');
     const overlay = document.getElementById('overlay');
+    const startBtn = document.getElementById('start-btn');
     
-    let gridSize = 8; // On commence plus petit mais plus dense
+    let gridSize = 8;
     let tileSize = 0;
     let level = 1;
     let grid = [];
@@ -50,8 +53,53 @@
     canvas.width = 400;
     canvas.height = 400;
 
+    // --- AUDIO ENGINE ---
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    let audioCtx = null;
+
+    function playSound(type) {
+        if (!audioCtx) audioCtx = new AudioCtx();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        const now = audioCtx.currentTime;
+
+        if (type === 'step') {
+            // Petit bip dont la fréquence augmente avec la longueur du chemin
+            const freq = 400 + (path.length * 10);
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, now);
+            gain.gain.setValueAtTime(0.05, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+            osc.start(); osc.stop(now + 0.1);
+        } else if (type === 'fail') {
+            // Son de glitch descendant
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(200, now);
+            osc.frequency.linearRampToValueAtTime(50, now + 0.3);
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.linearRampToValueAtTime(0.001, now + 0.3);
+            osc.start(); osc.stop(now + 0.3);
+        } else if (type === 'win') {
+            // Petite mélodie ascendante
+            [523, 659, 784, 1046].forEach((f, i) => {
+                const o = audioCtx.createOscillator();
+                const g = audioCtx.createGain();
+                o.connect(g); g.connect(audioCtx.destination);
+                o.type = 'square';
+                o.frequency.setValueAtTime(f, now + (i * 0.08));
+                g.gain.setValueAtTime(0.03, now + (i * 0.08));
+                g.gain.exponentialRampToValueAtTime(0.001, now + (i * 0.08) + 0.2);
+                o.start(now + (i * 0.08)); o.stop(now + (i * 0.08) + 0.2);
+            });
+        }
+    }
+
     function initLevel() {
-        // La grille grandit tous les 2 niveaux
+        if (!audioCtx) audioCtx = new AudioCtx();
         gridSize = 7 + Math.floor(level / 2);
         tileSize = canvas.width / gridSize;
         grid = [];
@@ -59,10 +107,8 @@
         gameActive = false;
         overlay.classList.add('hidden');
 
-        // Création de la grille avec haute densité d'obstacles (35%)
         for(let y=0; y<gridSize; y++) {
             for(let x=0; x<gridSize; x++) {
-                // On laisse une zone libre autour du départ et de l'arrivée
                 let isEdge = (x === 0 || x === gridSize - 1);
                 let rand = Math.random();
                 let type = (!isEdge && rand < 0.35) ? 'block' : 'empty';
@@ -70,7 +116,6 @@
             }
         }
 
-        // Points de départ et d'arrivée aléatoires sur les bords opposés pour varier
         startNode = { x: 0, y: Math.floor(Math.random() * gridSize) };
         endNode = { x: gridSize-1, y: Math.floor(Math.random() * gridSize) };
         
@@ -86,7 +131,6 @@
     function draw() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
-        // Background Grid
         ctx.strokeStyle = "rgba(34, 211, 238, 0.05)";
         ctx.lineWidth = 1;
         for(let i=0; i<=gridSize; i++) {
@@ -96,7 +140,6 @@
 
         grid.forEach(n => {
             if(n.type === 'block') {
-                // Blocs style "mur" plus imposants
                 ctx.fillStyle = "#1e293b";
                 ctx.strokeStyle = "rgba(255,255,255,0.1)";
                 ctx.lineWidth = 2;
@@ -118,7 +161,6 @@
             ctx.shadowBlur = 0;
         });
 
-        // Tracé du chemin
         if(path.length > 0) {
             ctx.beginPath();
             ctx.strokeStyle = "#22d3ee";
@@ -153,25 +195,27 @@
         if(!gameActive && node && node.type === 'start') {
             gameActive = true;
             path = [{x, y}];
+            playSound('step');
         }
 
         if(gameActive) {
             const last = path[path.length - 1];
             if(x !== last.x || y !== last.y) {
-                // Vérifier si le mouvement est adjacent (pas de diagonale)
                 const isAdjacent = Math.abs(x - last.x) + Math.abs(y - last.y) === 1;
                 
                 if(isAdjacent) {
-                    // Collision mur ou soi-même
                     if(node.type === 'block' || path.some(p => p.x === x && p.y === y)) {
                         gameActive = false;
+                        playSound('fail');
                         if (navigator.vibrate) navigator.vibrate(100);
                         document.getElementById('title').innerText = "Signal Perdu";
                         overlay.classList.remove('hidden');
                     } else {
                         path.push({x, y});
+                        playSound('step');
                         if(node.type === 'end') {
                             gameActive = false;
+                            playSound('win');
                             level++;
                             document.getElementById('title').innerText = "Niveau Complété";
                             overlay.classList.remove('hidden');
@@ -183,6 +227,7 @@
         }
     }
 
+    startBtn.addEventListener('click', initLevel);
     canvas.addEventListener('mousemove', handleMove);
     canvas.addEventListener('touchstart', (e) => { e.preventDefault(); handleMove(e); }, {passive: false});
     canvas.addEventListener('touchmove', (e) => { e.preventDefault(); handleMove(e); }, {passive: false});

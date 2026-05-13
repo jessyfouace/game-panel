@@ -4,183 +4,188 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
     <title>Flappy Space - Arcade 🚀</title>
-
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
-
     <style>
-        body {
-            font-family: 'Outfit', sans-serif;
-            background: #0f172a;
-            color: #f8fafc;
-            touch-action: none;
-            overflow: hidden;
-            position: fixed;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding-top: 4em;
-        }
-        .glass {
-            background: rgba(30, 41, 59, 0.7);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        canvas {
-            display: block;
-            background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
-            border-radius: 2.5rem;
-            width: 100%;
-            max-width: 400px;
-            height: 65vh;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-        }
+        body { font-family: 'Outfit', sans-serif; background: #0f172a; color: #f8fafc; touch-action: none; overflow: hidden; position: fixed; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; padding-top: 4em; }
+        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        canvas { display: block; background: #010409; border-radius: 2rem; width: 100%; max-width: 400px; height: 65vh; border: 1px solid rgba(255, 255, 255, 0.05); }
     </style>
 </head>
 <body class="py-10 px-4">
 
-    <div class="w-full max-w-md flex items-center justify-between mb-6">
+    <div class="w-full max-w-md flex items-center justify-between mb-8">
         <a href="index.html" class="w-12 h-12 glass rounded-2xl flex items-center justify-center text-slate-400 active:scale-90 transition-transform">
             <i class="fa-solid fa-arrow-left"></i>
         </a>
-        <div class="glass px-6 py-2 rounded-2xl flex items-center gap-3">
-            <span class="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Score</span>
-            <span id="score-val" class="font-bold text-xl text-blue-400">0</span>
+        <div class="glass px-6 py-2 rounded-2xl flex flex-col items-center">
+            <span class="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Score</span>
+            <span id="score" class="font-bold text-blue-400 text-xl">0</span>
         </div>
-        <div class="w-12"></div>
     </div>
 
     <div class="relative w-full max-w-[400px]">
-        <canvas id="gameCanvas"></canvas>
-        
-        <div id="overlay" class="absolute inset-0 bg-slate-950/60 backdrop-blur-sm rounded-[2.5rem] flex flex-col items-center justify-center text-center p-6 z-50">
-            <div id="ui-content">
-                <div id="icon-box" class="w-20 h-20 bg-blue-500/20 text-blue-400 rounded-full flex items-center justify-center text-3xl mb-4 mx-auto animate-bounce">
-                    <i class="fa-solid fa-rocket"></i>
-                </div>
-                <h2 id="title" class="text-2xl font-bold mb-2 text-white">Flappy Space</h2>
-                <p id="msg" class="text-slate-400 mb-8 text-sm">Touche pour faire décoller la fusée</p>
-                <button id="main-btn" class="bg-blue-500 text-white px-10 py-4 rounded-2xl font-bold shadow-lg shadow-blue-500/20 active:scale-95 transition-all">
-                    DÉMARRER
-                </button>
-            </div>
+        <canvas id="flappyCanvas"></canvas>
+        <div id="overlay" class="absolute inset-0 bg-slate-950/80 backdrop-blur-md rounded-[2rem] flex flex-col items-center justify-center text-center p-6 z-50">
+            <div id="icon-box" class="text-blue-400 text-4xl mb-4"><i class="fa-solid fa-rocket"></i></div>
+            <h2 id="title" class="text-2xl font-bold mb-2 uppercase italic">Flappy Space</h2>
+            <p id="msg" class="text-slate-400 mb-8 text-sm">Évite les astéroïdes pour survivre</p>
+            <button id="main-btn" class="bg-blue-600 text-white px-10 py-4 rounded-2xl font-bold shadow-lg shadow-blue-500/20 active:scale-95 transition-all">LANCER LES MOTEURS</button>
         </div>
     </div>
 
-    <div class="mt-8 text-slate-500 text-[10px] uppercase font-bold tracking-[0.3em] animate-pulse">
-        Tapote pour monter
-    </div>
-
     <script>
-        const canvas = document.getElementById('gameCanvas');
+        const canvas = document.getElementById('flappyCanvas');
         const ctx = canvas.getContext('2d');
-        const scoreDisplay = document.getElementById('score-val');
+        const scoreDisplay = document.getElementById('score');
         const overlay = document.getElementById('overlay');
-        const mainBtn = document.getElementById('main-btn');
         const titleText = document.getElementById('title');
         const msgText = document.getElementById('msg');
+        const mainBtn = document.getElementById('main-btn');
         const iconBox = document.getElementById('icon-box');
 
-        canvas.width = 400;
-        canvas.height = 600;
+        canvas.width = 400; canvas.height = 500;
 
-        let rocket, pipes, score, gameActive, frame;
-        const gravity = 0.22;
-        const jump = -4.8;
-        const pipeWidth = 65;
-        const pipeGap = 170;
+        // --- AUDIO ENGINE ---
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        let audioCtx = null;
+        let musicNodes = [];
 
-        function init() {
-            rocket = { x: 60, y: 300, w: 34, h: 24, velocity: 0 };
-            pipes = [];
-            score = 0;
-            gameActive = false;
-            scoreDisplay.innerText = "0";
-            draw();
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new AudioCtx();
+                startBackgroundMusic();
+            }
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+        }
+
+        function playSound(type) {
+            if (!audioCtx) return;
+            const now = audioCtx.currentTime;
+            const gain = audioCtx.createGain();
+            gain.connect(audioCtx.destination);
+
+            if (type === 'boost') {
+                const osc = audioCtx.createOscillator();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(150, now);
+                osc.frequency.exponentialRampToValueAtTime(400, now + 0.1);
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+                osc.connect(gain); osc.start(); osc.stop(now + 0.2);
+            } else if (type === 'crash') {
+                const osc = audioCtx.createOscillator();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(100, now);
+                osc.frequency.linearRampToValueAtTime(20, now + 0.5);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.linearRampToValueAtTime(0.001, now + 0.5);
+                osc.connect(gain); osc.start(); osc.stop(now + 0.5);
+            }
+        }
+
+        function startBackgroundMusic() {
+            // Création d'une nappe sonore spatiale (Drone)
+            const playNote = (freq, startTime) => {
+                const osc = audioCtx.createOscillator();
+                const g = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, startTime);
+                g.gain.setValueAtTime(0, startTime);
+                g.gain.linearRampToValueAtTime(0.03, startTime + 2);
+                g.gain.linearRampToValueAtTime(0, startTime + 4);
+                osc.connect(g); g.connect(audioCtx.destination);
+                osc.start(startTime); osc.stop(startTime + 4);
+            };
+
+            const loop = () => {
+                const now = audioCtx.currentTime;
+                playNote(110, now); // La2
+                playNote(164.81, now + 1); // Mi3
+                playNote(138.59, now + 2); // Do#3
+                setTimeout(loop, 4000);
+            };
+            loop();
+        }
+
+        // --- GAME LOGIC ---
+        let rocket = { x: 50, y: 250, w: 32, h: 24, velocity: 0 };
+        let gravity = 0.4, jump = -7, score = 0, gameActive = false, frame = null;
+        let pipes = [], stars = [];
+
+        function initStars() {
+            stars = [];
+            for(let i=0; i<50; i++) stars.push({ x: Math.random()*canvas.width, y: Math.random()*canvas.height, s: Math.random()*2 });
         }
 
         function startGame() {
-            init();
-            gameActive = true;
+            initAudio();
+            gameActive = true; score = 0; pipes = [];
+            rocket.y = 250; rocket.velocity = 0;
+            scoreDisplay.innerText = score;
             overlay.classList.add('hidden');
-            animate();
+            initStars();
+            gameLoop();
         }
 
-        function animate() {
+        function spawnPipe() {
+            const gap = 150;
+            const minH = 50;
+            const h = Math.floor(Math.random() * (canvas.height - gap - minH*2)) + minH;
+            pipes.push({ x: canvas.width, y: h, w: 50, gap: gap, passed: false });
+        }
+
+        function gameLoop() {
             if (!gameActive) return;
-            update();
-            draw();
-            frame = requestAnimationFrame(animate);
-        }
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Background
+            ctx.fillStyle = "#fff";
+            stars.forEach(s => {
+                ctx.fillRect(s.x, s.y, s.s, s.s);
+                s.x -= 0.5; if(s.x < 0) s.x = canvas.width;
+            });
 
-        function update() {
+            // Rocket
             rocket.velocity += gravity;
             rocket.y += rocket.velocity;
-
-            if (rocket.y + rocket.h > canvas.height || rocket.y < 0) {
-                gameOver();
-            }
-
-            if (pipes.length === 0 || pipes[pipes.length - 1].x < canvas.width - 220) {
-                let pipeY = Math.random() * (canvas.height - pipeGap - 120) + 60;
-                pipes.push({ x: canvas.width, y: pipeY, passed: false });
-            }
-
-            pipes.forEach((pipe) => {
-                pipe.x -= 2.8;
-                if (rocket.x < pipe.x + pipeWidth &&
-                    rocket.x + rocket.w > pipe.x &&
-                    (rocket.y < pipe.y || rocket.y + rocket.h > pipe.y + pipeGap)) {
-                    gameOver();
-                }
-                if (!pipe.passed && rocket.x > pipe.x + pipeWidth) {
-                    pipe.passed = true;
-                    score++;
-                    scoreDisplay.innerText = score;
-                    if (navigator.vibrate) navigator.vibrate(10);
-                }
-            });
-
-            if (pipes.length > 0 && pipes[0].x < -pipeWidth) pipes.shift();
-        }
-
-        function draw() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // Obstacles néons
-            pipes.forEach(pipe => {
-                ctx.fillStyle = "rgba(59, 130, 246, 0.2)";
-                ctx.strokeStyle = "rgba(59, 130, 246, 0.6)";
-                ctx.lineWidth = 3;
-                
-                // Haut
-                ctx.beginPath();
-                ctx.roundRect(pipe.x, 0, pipeWidth, pipe.y, [0, 0, 15, 15]);
-                ctx.fill(); ctx.stroke();
-
-                // Bas
-                ctx.beginPath();
-                ctx.roundRect(pipe.x, pipe.y + pipeGap, pipeWidth, canvas.height - (pipe.y + pipeGap), [15, 15, 0, 0]);
-                ctx.fill(); ctx.stroke();
-            });
-
-            // Fusée avec rotation
-            ctx.font = "32px serif";
+            
             ctx.save();
-            ctx.translate(rocket.x + rocket.w/2, rocket.y + rocket.h/2);
-            let angle = Math.min(Math.PI/4, Math.max(-Math.PI/4, rocket.velocity * 0.12));
-            ctx.rotate(angle);
+            ctx.translate(rocket.x + 16, rocket.y + 12);
+            ctx.rotate(Math.min(Math.PI/4, Math.max(-Math.PI/4, rocket.velocity * 0.1)));
+            ctx.font = "24px serif";
             ctx.fillText("🚀", -16, 12);
             ctx.restore();
+
+            // Pipes
+            if (pipes.length === 0 || pipes[pipes.length-1].x < canvas.width - 200) spawnPipe();
+            pipes.forEach((p, i) => {
+                p.x -= 3;
+                ctx.fillStyle = "#1e293b";
+                ctx.strokeStyle = "#3b82f6";
+                ctx.lineWidth = 2;
+                // Top pipe
+                ctx.fillRect(p.x, 0, p.w, p.y); ctx.strokeRect(p.x, 0, p.w, p.y);
+                // Bottom pipe
+                ctx.fillRect(p.x, p.y + p.gap, p.w, canvas.height); ctx.strokeRect(p.x, p.y + p.gap, p.w, canvas.height);
+
+                if (!p.passed && p.x + p.w < rocket.x) {
+                    score++; p.passed = true; scoreDisplay.innerText = score;
+                }
+
+                if (rocket.x + 25 > p.x && rocket.x + 5 < p.x + p.w && (rocket.y < p.y || rocket.y + 20 > p.y + p.gap)) gameOver();
+                if (p.x + p.w < 0) pipes.splice(i, 1);
+            });
+
+            if (rocket.y < 0 || rocket.y + 20 > canvas.height) gameOver();
+            frame = requestAnimationFrame(gameLoop);
         }
 
         function gameOver() {
             gameActive = false;
             cancelAnimationFrame(frame);
+            playSound('crash');
             if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
             
             titleText.innerText = "CRASH !";
@@ -193,33 +198,32 @@
 
         function handleInput(e) {
             if (gameActive) {
+                playSound('boost');
                 rocket.velocity = jump;
                 if (e) e.preventDefault();
             }
         }
 
-        // Ecouteurs d'événements
         mainBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             startGame();
         });
 
-        window.addEventListener('touchstart', (e) => {
-            if (gameActive) handleInput(e);
-        }, { passive: false });
-
-        window.addEventListener('mousedown', () => {
-            if (gameActive) handleInput();
-        });
-
+        window.addEventListener('touchstart', (e) => { if (gameActive) handleInput(e); }, { passive: false });
+        window.addEventListener('mousedown', () => { if (gameActive) handleInput(); });
         window.addEventListener('keydown', (e) => {
             if (e.code === 'Space') {
-                if (!gameActive && !overlay.classList.contains('hidden')) startGame();
+                if (!gameActive && overlay.classList.contains('hidden')) return;
+                if (!gameActive) startGame();
                 else handleInput();
             }
         });
 
-        init();
+        initStars();
+        // Dessin initial
+        ctx.fillStyle = "#fff";
+        ctx.font = "24px serif";
+        ctx.fillText("🚀", rocket.x, rocket.y);
     </script>
 </body>
 </html>
