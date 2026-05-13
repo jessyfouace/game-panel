@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+    <title>Neon Crush ⚔️</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Outfit', sans-serif; background: #020617; color: #f8fafc; touch-action: none; overflow: hidden; position: fixed; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; }
+        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        canvas { display: block; background: #010409; border-radius: 2rem; width: 95vw; max-width: 450px; height: 60vh; border: 2px solid rgba(34, 211, 238, 0.2); }
+        .hp-bar { height: 6px; background: #334155; border-radius: 3px; overflow: hidden; width: 100px; }
+        .hp-fill { height: 100%; background: #f43f5e; transition: width 0.3s ease; }
+    </style>
+</head>
+<body class="py-10 px-4">
+
+    <div class="w-full max-w-md flex items-center justify-between mb-4">
+        <a href="index.html" class="w-10 h-10 glass rounded-xl flex items-center justify-center text-slate-400"><i class="fa-solid fa-arrow-left"></i></a>
+        <div class="flex flex-col items-end">
+            <div class="glass px-4 py-1 rounded-lg mb-1"><span id="score" class="font-bold text-cyan-400">0</span> <span class="text-[10px] text-slate-500 uppercase">Kills</span></div>
+            <div class="hp-bar"><div id="hp-fill" class="hp-fill" style="width: 100%"></div></div>
+        </div>
+    </div>
+
+    <div class="relative flex items-center justify-center">
+        <canvas id="crushCanvas"></canvas>
+        <div id="overlay" class="absolute inset-0 flex flex-col items-center justify-center text-center p-6 z-50 glass rounded-[2rem]">
+            <h2 id="title" class="text-4xl font-black mb-2 text-cyan-400 italic uppercase">Neon Crush</h2>
+            <p id="msg" class="text-slate-400 mb-8 text-xs uppercase tracking-widest">Vise pour survivre</p>
+            <button onclick="startGame()" class="bg-cyan-500 text-slate-900 px-12 py-4 rounded-2xl font-black shadow-lg shadow-cyan-500/40 active:scale-95 transition-all uppercase italic">Défourailler</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('crushCanvas');
+        const ctx = canvas.getContext('2d');
+        const overlay = document.getElementById('overlay');
+        
+        canvas.width = 400; canvas.height = 500;
+        const centerX = 200; const centerY = 250;
+
+        let gameActive = false, score = 0, hp = 100, frameCount = 0;
+        let player = { x: centerX, y: centerY, angle: 0, level: 1 };
+        let bullets = [], enemies = [], particles = [];
+        let mouse = { x: centerX, y: 0 };
+
+        function startGame() {
+            gameActive = true; score = 0; hp = 100; frameCount = 0;
+            bullets = []; enemies = []; particles = []; player.level = 1;
+            overlay.classList.add('hidden');
+            requestAnimationFrame(gameLoop);
+        }
+
+        function spawnEnemy() {
+            const angle = Math.random() * Math.PI * 2;
+            const dist = 300;
+            enemies.push({
+                x: centerX + Math.cos(angle) * dist,
+                y: centerY + Math.sin(angle) * dist,
+                speed: 1 + (score / 50),
+                hp: 1
+            });
+        }
+
+        function createExplosion(x, y, color) {
+            for(let i=0; i<8; i++) {
+                particles.push({
+                    x, y, 
+                    dx: (Math.random()-0.5)*5, 
+                    dy: (Math.random()-0.5)*5, 
+                    life: 1.0, color
+                });
+            }
+        }
+
+        function gameLoop() {
+            if (!gameActive) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            frameCount++;
+
+            // 1. Visée
+            player.angle = Math.atan2(mouse.y - centerY, mouse.x - centerX);
+
+            // 2. Tir Auto
+            let fireRate = Math.max(8, 20 - player.level);
+            if (frameCount % fireRate === 0) {
+                const bSpeed = 7;
+                bullets.push({ x: centerX, y: centerY, dx: Math.cos(player.angle)*bSpeed, dy: Math.sin(player.angle)*bSpeed });
+                if (player.level >= 2) { // Double tir
+                    bullets.push({ x: centerX, y: centerY, dx: Math.cos(player.angle+0.2)*bSpeed, dy: Math.sin(player.angle+0.2)*bSpeed });
+                }
+                if (player.level >= 3) { // Triple tir
+                    bullets.push({ x: centerX, y: centerY, dx: Math.cos(player.angle-0.2)*bSpeed, dy: Math.sin(player.angle-0.2)*bSpeed });
+                }
+            }
+
+            // 3. Update Balles
+            bullets.forEach((b, bi) => {
+                b.x += b.dx; b.y += b.dy;
+                ctx.fillStyle = "#22d3ee";
+                ctx.fillRect(b.x-2, b.y-2, 4, 4);
+                if (b.x<0 || b.x>canvas.width || b.y<0 || b.y>canvas.height) bullets.splice(bi, 1);
+            });
+
+            // 4. Update Ennemis
+            if (frameCount % Math.max(10, 40 - score) === 0) spawnEnemy();
+            enemies.forEach((e, ei) => {
+                let angle = Math.atan2(centerY - e.y, centerX - e.x);
+                e.x += Math.cos(angle) * e.speed;
+                e.y += Math.sin(angle) * e.speed;
+
+                ctx.fillStyle = "#f43f5e";
+                ctx.shadowBlur = 10; ctx.shadowColor = "#f43f5e";
+                ctx.fillRect(e.x-8, e.y-8, 16, 16);
+                ctx.shadowBlur = 0;
+
+                // Collision Balle
+                bullets.forEach((b, bi) => {
+                    if (Math.hypot(b.x - e.x, b.y - e.y) < 15) {
+                        createExplosion(e.x, e.y, "#f43f5e");
+                        enemies.splice(ei, 1);
+                        bullets.splice(bi, 1);
+                        score++;
+                        if (score % 15 === 0) player.level++; 
+                        document.getElementById('score').innerText = score;
+                    }
+                });
+
+                // Collision Joueur
+                if (Math.hypot(centerX - e.x, centerY - e.y) < 20) {
+                    hp -= 10;
+                    document.getElementById('hp-fill').style.width = hp + "%";
+                    enemies.splice(ei, 1);
+                    if (hp <= 0) gameOver();
+                    if (navigator.vibrate) navigator.vibrate(50);
+                }
+            });
+
+            // 5. Particules
+            particles.forEach((p, pi) => {
+                p.x += p.dx; p.y += p.dy; p.life -= 0.02;
+                ctx.globalAlpha = p.life;
+                ctx.fillStyle = p.color;
+                ctx.fillRect(p.x, p.y, 2, 2);
+                if (p.life <= 0) particles.splice(pi, 1);
+            });
+            ctx.globalAlpha = 1;
+
+            // 6. Dessin Joueur
+            ctx.save();
+            ctx.translate(centerX, centerY);
+            ctx.rotate(player.angle);
+            ctx.fillStyle = "#fff";
+            ctx.shadowBlur = 20; ctx.shadowColor = "#22d3ee";
+            ctx.fillRect(-12, -12, 24, 24);
+            ctx.fillStyle = "#22d3ee"; // Canon
+            ctx.fillRect(10, -3, 8, 6);
+            ctx.restore();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function gameOver() {
+            gameActive = false;
+            document.getElementById('title').innerText = "Vaincu !";
+            document.getElementById('msg').innerText = `Kills : ${score} - Niveau arme : ${player.level}`;
+            overlay.classList.remove('hidden');
+        }
+
+        // Contrôles
+        const updateMouse = (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            mouse.x = (clientX - rect.left) * (canvas.width / rect.width);
+            mouse.y = (clientY - rect.top) * (canvas.height / rect.height);
+        };
+
+        window.addEventListener('mousemove', updateMouse);
+        window.addEventListener('touchmove', (e) => { e.preventDefault(); updateMouse(e); }, {passive:false});
+    </script>
+</body>
+</html>
