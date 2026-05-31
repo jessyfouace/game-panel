@@ -49,86 +49,240 @@
             color: #f87171 !important;
         }
 
+        /* Texture rétro-réfléchissante réaliste des plaques */
         .license-plate {
             font-family: 'Courier New', Courier, monospace;
             font-weight: 900;
             text-transform: uppercase;
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6), inset 0 2px 4px rgba(255,255,255,0.1);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6), inset 0 2px 4px rgba(255,255,255,0.2);
             letter-spacing: 1px;
+            position: relative;
+            overflow: hidden;
+        }
+        .license-plate::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image: radial-gradient(rgba(0,0,0,0.08) 1px, transparent 1px);
+            background-size: 3px 3px;
+            opacity: 0.6;
+            pointer-events: none;
+            z-index: 2;
         }
         .euro-stars {
             background-image: radial-gradient(circle, #facc15 0.8px, transparent 0.8px);
             background-size: 5px 5px;
         }
+        /* Custom scrollbar pour le tableau de bord */
+        .custom-scroll::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scroll::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.1);
+            border-radius: 10px;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.2);
+            border-radius: 10px;
+        }
     </style>
 </head>
 <body class="py-10 px-4">
 
-    <div class="w-full max-w-md flex items-center justify-between mb-8">
-        <a href="index.html" class="w-12 h-12 glass rounded-2xl flex items-center justify-center text-slate-400 active:scale-90 transition-transform">
-            <i class="fa-solid fa-arrow-left"></i>
-        </a>
-        <div class="flex gap-4">
-            <div class="glass px-4 py-2 rounded-xl text-center">
-                <p class="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Série</p>
-                <p id="streak" class="font-bold text-xl text-indigo-400">0</p>
+    <div id="difficulty-screen" class="fixed inset-0 bg-slate-900/95 z-50 flex flex-col items-center justify-center p-6 backdrop-blur-md">
+        <div class="w-full max-w-sm text-center">
+            <h1 class="text-3xl font-black text-white mb-2">Quiz Plaques 🚗</h1>
+            <p class="text-sm text-slate-400 mb-8">Choisis ton mode de jeu pour commencer</p>
+            
+            <div class="flex flex-col gap-4">
+                <button onclick="setDifficulty('easy')" class="glass w-full py-5 rounded-2xl border-2 border-emerald-500/30 hover:border-emerald-500 text-left px-6 active:scale-95 transition-all">
+                    <div class="font-bold text-xl text-emerald-400">Mode Facile</div>
+                    <div class="text-xs text-slate-400 mt-1">3 choix affichés avec drapeaux. Trouve le bon code ISO.</div>
+                </button>
+
+                <button onclick="setDifficulty('hard')" class="glass w-full py-5 rounded-2xl border-2 border-rose-500/30 hover:border-rose-500 text-left px-6 active:scale-95 transition-all">
+                    <div class="font-bold text-xl text-rose-400">Mode Difficile</div>
+                    <div class="text-xs text-slate-400 mt-1">Saisie manuelle. Indice (+0.5 pt) ou Validation par Entrée.</div>
+                </button>
             </div>
-            <div class="glass px-4 py-2 rounded-xl text-center">
-                <p class="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Record</p>
-                <p id="best-streak" class="font-bold text-xl text-amber-400">0</p>
+        </div>
+    </div>
+
+    <div id="end-screen" class="fixed inset-0 bg-slate-900/98 z-50 hidden flex flex-col items-center justify-start p-4 overflow-y-auto pt-8">
+        <div class="w-full max-w-md text-center glass p-6 rounded-[2rem] border border-slate-700 flex flex-col max-h-[90vh]">
+            <h2 class="text-2xl font-black text-white mb-1">Partie terminée ! 🎉</h2>
+            
+            <div class="bg-slate-800/80 px-6 py-3 rounded-2xl border border-indigo-500/30 my-4 flex items-center justify-between">
+                <p class="text-xs text-indigo-400 uppercase font-black tracking-widest">Note Finale</p>
+                <p class="text-3xl font-black text-white"><span id="final-score">0</span> <span class="text-lg text-slate-500">/ 20</span></p>
+            </div>
+
+            <p class="text-left text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider px-1">Récapitulatif (cliquez pour voir la plaque) :</p>
+            
+            <div id="dashboard-history" class="custom-scroll flex-1 overflow-y-auto space-y-2 pr-1 mb-6 text-left text-sm">
+            </div>
+
+            <button onclick="location.reload()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-4 rounded-xl transition-colors shadow-lg active:scale-95 transition-transform mt-auto flex-shrink-0">
+                Rejouer une partie
+            </button>
+        </div>
+    </div>
+
+    <div class="w-full max-w-md flex items-center justify-between mb-8">
+        <button onclick="location.reload()" class="w-12 h-12 glass rounded-2xl flex items-center justify-center text-slate-400 active:scale-90 transition-transform">
+            <i class="fa-solid fa-arrow-left"></i>
+        </button>
+        <div class="flex gap-4">
+            <div class="glass px-4 py-2 rounded-xl text-center min-w-[90px]">
+                <p class="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Note</p>
+                <p class="font-bold text-xl text-indigo-400"><span id="score-display">0</span><span class="text-xs text-slate-500">/20</span></p>
+            </div>
+            <div class="glass px-4 py-2 rounded-xl text-center min-w-[90px]">
+                <p class="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Progression</p>
+                <p class="font-bold text-xl text-amber-400"><span id="question-number">1</span><span class="text-xs text-slate-500">/20</span></p>
             </div>
         </div>
     </div>
 
     <div class="w-full max-w-md">
-        <div class="glass p-6 rounded-[2rem] mb-8 flex items-center justify-center min-h-[160px]">
+        <div class="glass p-6 rounded-[2rem] mb-6 flex flex-col items-center justify-center min-h-[160px] relative">
             <div id="plate-container" class="w-full">
-                <!-- La plaque générée dynamiquement apparaîtra ici -->
             </div>
+            <div id="feedback-message" class="absolute bottom-2 text-xs font-bold hidden text-center px-4"></div>
         </div>
 
-        <div id="choices-container" class="grid grid-cols-1 gap-4">
-            <!-- Boutons de choix -->
+        <div id="choices-container" class="grid grid-cols-1 gap-4 mb-4 hidden">
+        </div>
+
+        <div id="input-container" class="flex flex-col gap-4 hidden">
+            <div class="flex gap-2">
+                <input type="text" id="code-input" maxlength="3" placeholder="Code ISO (ex: FRA)..." 
+                       class="flex-1 bg-slate-800/80 border-2 border-slate-700 text-white rounded-2xl py-4 px-4 text-center text-xl font-black uppercase tracking-widest focus:outline-none focus:border-indigo-500 placeholder:text-slate-500 placeholder:font-normal placeholder:text-base">
+                <button onclick="submitManualAnswer()" id="submit-btn" class="glass px-6 rounded-2xl bg-indigo-600/30 text-indigo-400 border border-indigo-500/30 font-bold active:scale-95 transition-transform">
+                    Valider
+                </button>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4">
+                <button onclick="useHint()" id="hint-btn" class="glass py-3 rounded-xl text-sm font-bold text-amber-400 border border-amber-500/20 active:scale-95 transition-transform">
+                    <i class="fa-solid fa-lightbulb mr-1"></i> Indice (+0.5)
+                </button>
+                <button onclick="giveUp()" class="glass py-3 rounded-xl text-sm font-bold text-rose-400 border border-rose-500/20 active:scale-95 transition-transform">
+                    <i class="fa-solid fa-flag mr-1"></i> Abandonner
+                </button>
+            </div>
         </div>
     </div>
 
     <script>
-        // Base de données étendue de plaques réalistes d'Europe / Eurasie conduisant en France
-        const countries = [
-            { id: 'fr', code: 'FRA', name: 'France', bg: 'bg-white', text: 'text-slate-900', format: 'AA-123-AA', euro: 'F', rightBand: true, rightText: '75' },
-            { id: 'de', code: 'DEU', name: 'Allemagne', bg: 'bg-white', text: 'text-slate-900', format: 'B AB 426', euro: 'D', seal: true },
-            { id: 'it', code: 'ITA', name: 'Italie', bg: 'bg-white', text: 'text-slate-900', format: 'AA 000AA', euro: 'I', rightBand: true, rightText: 'RM', rightColor: 'bg-blue-600 text-amber-400' },
-            { id: 'nl', code: 'NLD', name: 'Pays-Bas', bg: 'bg-yellow-400', text: 'text-slate-900', format: 'XX-123-X', euro: 'NL' },
-            { id: 'gb', code: 'GBR', name: 'Royaume-Uni', bg: 'bg-yellow-300', text: 'text-slate-900', format: 'AB12 CDE', euro: 'UK' },
-            { id: 'be', code: 'BEL', name: 'Belgique', bg: 'bg-white', text: 'text-red-700', format: '1-AAA-123', euro: 'B' },
-            { id: 'es', code: 'ESP', name: 'Espagne', bg: 'bg-white', text: 'text-slate-900', format: '1234 BBB', euro: 'E' },
-            { id: 'ch', code: 'CHE', name: 'Suisse', bg: 'bg-white', text: 'text-slate-900', format: 'ZH 123 456', swissShield: true },
-            { id: 'pt', code: 'PRT', name: 'Portugal', bg: 'bg-white', text: 'text-slate-900', format: 'AA-00-AA', euro: 'P', rightBand: true, rightText: '24', rightColor: 'bg-yellow-400 text-slate-800 text-[9px]' },
-            { id: 'lu', code: 'LUX', name: 'Luxembourg', bg: 'bg-yellow-400', text: 'text-slate-900', format: 'AB 1234', euro: 'L' },
-            { id: 'pl', code: 'POL', name: 'Pologne', bg: 'bg-white', text: 'text-slate-900', format: 'XYZ 1234', euro: 'PL' },
-            { id: 'ro', code: 'ROU', name: 'Roumanie', bg: 'bg-white', text: 'text-slate-900', format: 'B 123 ABC', euro: 'RO' },
-            { id: 'ua', code: 'UKR', name: 'Ukraine', bg: 'bg-white', text: 'text-slate-900', format: 'AA 1234 BB', uaBand: true },
-            { id: 'ru', code: 'RUS', name: 'Russie', bg: 'bg-white', text: 'text-slate-900', format: 'X 123 XX 77', ruBand: true },
-            { id: 'at', code: 'AUT', name: 'Autriche', bg: 'bg-white', text: 'text-slate-900', format: 'W 12345 A', euro: 'A', seal: true, redBorder: true },
-            { id: 'ie', code: 'IRL', name: 'Irlande', bg: 'bg-white', text: 'text-slate-900', format: '12-D-12345', euro: 'IRL', gaelic: 'BAILE ÁTHA CLIATH' },
-            { id: 'no', code: 'NOR', name: 'Norvège', bg: 'bg-white', text: 'text-slate-900', format: 'AB 12345', noBand: true },
-            { id: 'se', code: 'SWE', name: 'Suède', bg: 'bg-white', text: 'text-slate-900', format: 'ABC 123', euro: 'S' },
-            { id: 'fi', code: 'FIN', name: 'Finlande', bg: 'bg-white', text: 'text-slate-900', format: 'ABC-123', euro: 'FIN' },
-            { id: 'dk', code: 'DNK', name: 'Danemark', bg: 'bg-white', text: 'text-slate-900', format: 'AB 12 345', euro: 'DK', redBorder: true },
-            { id: 'cz', code: 'CZE', name: 'Tchéquie', bg: 'bg-white', text: 'text-slate-900', format: '1A2 3456', euro: 'CZ' },
-            { id: 'hr', code: 'HRV', name: 'Croatie', bg: 'bg-white', text: 'text-slate-900', format: 'ZG 1234-AA', euro: 'HR', croShield: true },
-            { id: 'bg', code: 'BGR', name: 'Bulgarie', bg: 'bg-white', text: 'text-slate-900', format: 'CB 1234 MK', euro: 'BG' },
-            { id: 'tr', code: 'TUR', name: 'Turquie', bg: 'bg-white', text: 'text-slate-900', format: '34 ABC 123', euro: 'TR' },
-            { id: 'mc', code: 'MCO', name: 'Monaco', bg: 'bg-white', text: 'text-blue-800', format: 'A123', monacoShield: true },
-            { id: 'ad', code: 'AND', name: 'Andorre', bg: 'bg-white', text: 'text-slate-900', format: 'A 1234', andorraShield: true }
+        const originalCountries = [
+            { id: 'af', code: 'AFG', name: 'Afghanistan', flag: '🇦🇫', bg: 'bg-white', text: 'text-slate-900', format: '12345', afgStyle: true },
+            { id: 'al', code: 'ALB', name: 'Albanie', flag: '🇦🇱', bg: 'bg-white', text: 'text-slate-900', format: 'AA 123AA', alBand: true },
+            { id: 'dz', code: 'DZA', name: 'Algérie', flag: '🇩🇿', bg: 'bg-white', text: 'text-slate-900', format: '12345 123 01', araStyle: true, regionText: 'الجزائر' },
+            { id: 'de', code: 'DEU', name: 'Allemagne', flag: '🇩🇪', bg: 'bg-white', text: 'text-slate-900', format: 'B AB 426', euro: 'D', seal: true },
+            { id: 'ad', code: 'AND', name: 'Andorre', flag: '🇦🇩', bg: 'bg-white', text: 'text-slate-900', format: 'A 1234', andorraShield: true },
+            { id: 'at', code: 'AUT', name: 'Autriche', flag: '🇦🇹', bg: 'bg-white', text: 'text-slate-900', format: 'W 12345 A', euro: 'A', seal: true, redBorder: true },
+            { id: 'bd', code: 'BGD', name: 'Bangladesh', flag: '🇧🇩', bg: 'bg-green-800', text: 'text-white', format: '12-3456', bdStyle: true },
+            { id: 'be', code: 'BEL', name: 'Belgique', flag: '🇧🇪', bg: 'bg-white', text: 'text-red-700', format: '1-AAA-123', euro: 'B' },
+            { id: 'by', code: 'BLR', name: 'Biélorussie', flag: '🇧🇾', bg: 'bg-white', text: 'text-slate-900', format: '1234 AA-7', byBand: true },
+            { id: 'ba', code: 'BIH', name: 'Bosnie-Herzégovine', flag: '🇧🇦', bg: 'bg-white', text: 'text-slate-900', format: 'A12-A-123', bihStyle: true },
+            { id: 'bg', code: 'BGR', name: 'Bulgarie', flag: '🇧🇬', bg: 'bg-white', text: 'text-slate-900', format: 'CB 1234 MK', euro: 'BG' },
+            { id: 'cy', code: 'CYP', name: 'Chypre', flag: '🇨🇾', bg: 'bg-white', text: 'text-slate-900', format: 'ABC 123', euro: 'CY' },
+            { id: 'hr', code: 'HRV', name: 'Croatie', flag: '🇭🇷', bg: 'bg-white', text: 'text-slate-900', format: 'ZG 1234-AA', euro: 'HR', croShield: true },
+            { id: 'dk', code: 'DNK', name: 'Danemark', flag: '🇩🇰', bg: 'bg-white', text: 'text-slate-900', format: 'AB 12 345', euro: 'DK', redBorder: true },
+            { id: 'eg', code: 'EGY', name: 'Égypte', flag: '🇪🇬', bg: 'bg-slate-50', text: 'text-slate-900', format: '1234 ABC', egBand: true },
+            { id: 'er', code: 'ERI', name: 'Érythrée', flag: '🇪🇷', bg: 'bg-amber-400', text: 'text-slate-900', format: 'ER-12345', eriStyle: true },
+            { id: 'es', code: 'ESP', name: 'Espagne', flag: '🇪🇸', bg: 'bg-white', text: 'text-slate-900', format: '1234 BBB', euro: 'E' },
+            { id: 'ee', code: 'EST', name: 'Estonie', flag: '🇪🇪', bg: 'bg-white', text: 'text-slate-900', format: '123 ABC', euro: 'EST' },
+            { id: 'et', code: 'ETH', name: 'Éthiopie', flag: '🇪🇹', bg: 'bg-amber-100', text: 'text-red-600', format: '3-12345', ethStyle: true },
+            { id: 'fi', code: 'FIN', name: 'Finlande', flag: '🇫🇮', bg: 'bg-white', text: 'text-slate-900', format: 'ABC-123', euro: 'FIN' },
+            { id: 'fr', code: 'FRA', name: 'France', flag: '🇫🇷', bg: 'bg-white', text: 'text-slate-900', format: 'AA-123-AA', euro: 'F', rightBand: true, rightText: '75' },
+            { id: 'gr', code: 'GRC', name: 'Grèce', flag: '🇬🇷', bg: 'bg-white', text: 'text-slate-900', format: 'ABC-1234', euro: 'GR' },
+            { id: 'gn', code: 'GIN', name: 'Guinée', flag: '🇬🇳', bg: 'bg-white', text: 'text-slate-900', format: 'RC-1234-A', gnStyle: true },
+            { id: 'hu', code: 'HUN', name: 'Hongrie', flag: '🇭🇺', bg: 'bg-white', text: 'text-slate-900', format: 'AA-AA-123', euro: 'H' },
+            { id: 'in', code: 'IND', name: 'Inde', flag: '🇮🇳', bg: 'bg-white', text: 'text-slate-900', format: 'DL 3C AB 1234', indBand: true },
+            { id: 'iq', code: 'IRQ', name: 'Irak', flag: '🇮🇶', bg: 'bg-white', text: 'text-slate-900', format: '12345', iqStyle: true },
+            { id: 'ir', code: 'IRN', name: 'Iran', flag: '🇮🇷', bg: 'bg-white', text: 'text-slate-900', format: '12 A 345-11', irBand: true },
+            { id: 'ie', code: 'IRL', name: 'Irlande', flag: '🇮🇪', bg: 'bg-white', text: 'text-slate-900', format: '12-D-12345', euro: 'IRL', gaelic: 'BAILE ÁTHA CLIATH' },
+            { id: 'it', code: 'ITA', name: 'Italie', flag: '🇮🇹', bg: 'bg-white', text: 'text-slate-900', format: 'AA 000AA', euro: 'I', rightBand: true, rightText: 'RM', rightColor: 'bg-blue-600 text-amber-400' },
+            { id: 'xk', code: 'XKX', name: 'Kosovo', flag: '🇽🇰', bg: 'bg-white', text: 'text-slate-900', format: '01 123-AB', xkBand: true },
+            { id: 'lv', code: 'LVA', name: 'Lettonie', flag: '🇱🇻', bg: 'bg-white', text: 'text-slate-900', format: 'AB-1234', euro: 'LV' },
+            { id: 'ly', code: 'LBY', name: 'Libye', flag: '🇱🇾', bg: 'bg-white', text: 'text-slate-900', format: '12345-21', lyStyle: true },
+            { id: 'lt', code: 'LTU', name: 'Lituanie', flag: '🇱🇹', bg: 'bg-white', text: 'text-slate-900', format: 'ABC 123', euro: 'LT' },
+            { id: 'lu', code: 'LUX', name: 'Luxembourg', flag: '🇱🇺', bg: 'bg-yellow-400', text: 'text-slate-900', format: 'AB 1234', euro: 'L' },
+            { id: 'mk', code: 'MKD', name: 'Macédoine', flag: '🇲🇰', bg: 'bg-white', text: 'text-slate-900', format: 'SK 1234 AB', mkdBand: true },
+            { id: 'ma', code: 'MAR', name: 'Maroc', flag: '🇲🇦', bg: 'bg-white', text: 'text-slate-900', format: '12345 A 1', marStyle: true },
+            { id: 'md', code: 'MDA', name: 'Moldavie', flag: '🇲🇩', bg: 'bg-white', text: 'text-slate-900', format: 'ABC 123', mdaBand: true },
+            { id: 'mc', code: 'MCO', name: 'Monaco', flag: '🇲🇨', bg: 'bg-white', text: 'text-blue-800', format: 'A123', monacoShield: true },
+            { id: 'me', code: 'MNE', name: 'Monténégro', flag: '🇲🇪', bg: 'bg-white', text: 'text-slate-900', format: 'PG AB123', mneBand: true },
+            { id: 'np', code: 'NPL', name: 'Népal', flag: '🇳🇵', bg: 'bg-red-700', text: 'text-white', format: 'BA 1 PA 1234', nplStyle: true },
+            { id: 'no', code: 'NOR', name: 'Norvège', flag: '🇳🇴', bg: 'bg-white', text: 'text-slate-900', format: 'AB 12 345', noBand: true },
+            { id: 'pk', code: 'PAK', name: 'Pakistan', flag: '🇵🇰', bg: 'bg-teal-900', text: 'text-white', format: 'ICT AB-123', pkStyle: true },
+            { id: 'nl', code: 'NLD', name: 'Pays-Bas', flag: '🇳🇱', bg: 'bg-yellow-400', text: 'text-slate-900', format: 'XX-123-X', euro: 'NL' },
+            { id: 'pl', code: 'POL', name: 'Pologne', flag: '🇵🇱', bg: 'bg-white', text: 'text-slate-900', format: 'XYZ 1234', euro: 'PL' },
+            { id: 'pt', code: 'PRT', name: 'Portugal', flag: '🇵🇹', bg: 'bg-white', text: 'text-slate-900', format: 'AA-00-AA', euro: 'P', rightBand: true, rightText: '24', rightColor: 'bg-yellow-400 text-slate-800 text-[9px]' },
+            { id: 'ro', code: 'ROU', name: 'Roumanie', flag: '🇷🇴', bg: 'bg-white', text: 'text-slate-900', format: 'B 123 ABC', euro: 'RO' },
+            { id: 'gb', code: 'GBR', name: 'Royaume-Uni', flag: '🇬🇧', bg: 'bg-yellow-300', text: 'text-slate-900', format: 'AB12 CDE', ukBand: true },
+            { id: 'ru', code: 'RUS', name: 'Russie', flag: '🇷🇺', bg: 'bg-white', text: 'text-slate-900', format: 'X 123 XX 77', ruBand: true },
+            { id: 'rs', code: 'SRB', name: 'Serbie', flag: '🇷🇸', bg: 'bg-white', text: 'text-slate-900', format: 'BG 123-AA', srbBand: true },
+            { id: 'sk', code: 'SVK', name: 'Slovaquie', flag: '🇸🇰', bg: 'bg-white', text: 'text-slate-900', format: 'BL 123AA', euro: 'SK', skShield: true },
+            { id: 'si', code: 'SVN', name: 'Slovénie', flag: '🇸🇮', bg: 'bg-white', text: 'text-slate-900', format: 'LJ A1-23B', svnBand: true },
+            { id: 'so', code: 'SOM', name: 'Somalie', flag: '🇸🇴', bg: 'bg-white', text: 'text-slate-900', format: 'M 12345', somStyle: true },
+            { id: 'sd', code: 'SDN', name: 'Soudan', flag: '🇸🇩', bg: 'bg-white', text: 'text-slate-900', format: '12345', sdnStyle: true },
+            { id: 'lk', code: 'LKA', name: 'Sri-Lanka', flag: '🇱🇰', bg: 'bg-white', text: 'text-slate-900', format: 'WP CAD-1234', lkaStyle: true },
+            { id: 'se', code: 'SWE', name: 'Suède', flag: '🇸🇪', bg: 'bg-white', text: 'text-slate-900', format: 'ABC 123', euro: 'S' },
+            { id: 'ch', code: 'CHE', name: 'Suisse', flag: '🇨🇭', bg: 'bg-white', text: 'text-slate-900', format: 'ZH 123 456', swissShield: true },
+            { id: 'sy', code: 'SYR', name: 'Syrie', flag: '🇸🇾', bg: 'bg-white', text: 'text-slate-955', format: '123456', syrStyle: true },
+            { id: 'td', code: 'TCD', name: 'Tchad', flag: '🇹🇩', bg: 'bg-white', text: 'text-slate-900', format: '1234 A', tcdStyle: true },
+            { id: 'cz', code: 'CZE', name: 'Tchéquie', flag: '🇨🇿', bg: 'bg-white', text: 'text-slate-900', format: '1A2 3456', euro: 'CZ' },
+            { id: 'tn', code: 'TUN', name: 'Tunisie', flag: '🇹🇳', bg: 'bg-slate-955', text: 'text-white', format: '123 4567', tunStyle: true },
+            { id: 'tr', code: 'TUR', name: 'Turquie', flag: '🇹🇷', bg: 'bg-white', text: 'text-slate-900', format: '34 ABC 123', euro: 'TR' },
+            { id: 'ua', code: 'UKR', name: 'Ukraine', flag: '🇺🇦', bg: 'bg-white', text: 'text-slate-900', format: 'AA 1234 BB', uaBand: true },
+            { id: 'vn', code: 'VNM', name: 'Vietnam', flag: '🇻🇳', bg: 'bg-white', text: 'text-slate-900', format: '29-A 123.45', vnStyle: true }
         ];
 
+        let gameMode = 'easy';
         let currentCountry = null;
-        let streak = 0;
-        let bestStreak = localStorage.getItem('plaquesBestStreak') || 0;
+        let currentPlateHTML = ''; // Stocke le code HTML généré pour la plaque courante
+        let score = 0;
+        let questionCount = 0;
+        const maxQuestions = 20;
         let isWaiting = false;
+        let hintUsed = false;
+        let gamePool = [];
+        let gameHistory = [];
 
-        document.getElementById('best-streak').innerText = bestStreak;
+        function formatScore(num) {
+            return Number(num.toFixed(1)).toString();
+        }
+
+        function setDifficulty(mode) {
+            gameMode = mode;
+            document.getElementById('difficulty-screen').classList.add('hidden');
+            
+            if (gameMode === 'easy') {
+                document.getElementById('choices-container').classList.remove('hidden');
+            } else {
+                document.getElementById('input-container').classList.remove('hidden');
+                setupInputListener();
+            }
+
+            gamePool = [...originalCountries].sort(() => Math.random() - 0.5);
+            score = 0;
+            questionCount = 0;
+            gameHistory = [];
+
+            loadNextPlate();
+        }
+
+        function setupInputListener() {
+            const input = document.getElementById('code-input');
+            input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    submitManualAnswer();
+                }
+            });
+        }
 
         function randLetter() {
             const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -147,75 +301,64 @@
             const textStr = generateRandomText(country.format);
             const borderStyle = country.redBorder ? 'border-[3px] border-red-600' : 'border-[3px] border-slate-800';
             
-            // 1. FORMAT SUISSE (Sans bande, écussons latéraux)
+            if (country.tunStyle) {
+                return `<div class="license-plate bg-slate-955 text-white h-14 w-full rounded border-[3px] border-slate-800 flex items-center justify-between px-4 text-xl font-bold shadow-md"><span class="font-mono tracking-widest">${textStr.split(' ')[0]}</span><div class="text-xs bg-red-600 text-white font-bold px-2 py-0.5 rounded text-center">تونس</div><span class="font-mono tracking-widest">${textStr.split(' ')[1]}</span></div>`;
+            }
+            if (country.marStyle) {
+                return `<div class="license-plate bg-white text-slate-900 h-14 w-full rounded border-[3px] border-slate-800 flex items-center justify-between font-mono text-xl shadow-md overflow-hidden"><div class="flex-1 text-center font-bold tracking-widest">${textStr.split(' ')[0]}</div><div class="h-full w-10 border-l-2 border-r-2 border-slate-800 flex items-center justify-center font-black text-lg bg-slate-50">${textStr.split(' ')[1]}</div><div class="w-12 text-center font-bold text-base text-slate-500">${textStr.split(' ')[2]}</div></div>`;
+            }
+            if (country.araStyle) {
+                return `<div class="license-plate bg-white text-slate-900 h-14 w-full rounded border-[3px] border-slate-800 flex items-center justify-between font-mono text-base shadow-md px-2"><div class="flex flex-col text-left leading-none"><span class="text-[8px] text-slate-400">ALG</span><span class="font-bold tracking-tight">${textStr}</span></div><div class="text-xs border-l pl-2 border-slate-300 font-sans text-slate-600 font-bold">${country.regionText}</div></div>`;
+            }
+            if (country.pkStyle) {
+                return `<div class="license-plate bg-teal-900 text-white h-14 w-full rounded border-[3px] border-amber-500 flex flex-col items-center justify-center shadow-md relative py-1"><span class="text-[7px] text-teal-400 tracking-widest uppercase font-bold">ISLAMABAD</span><span class="font-mono text-lg font-black tracking-wide">${textStr}</span></div>`;
+            }
+            if (country.nplStyle) {
+                return `<div class="license-plate bg-red-700 text-white h-14 w-full rounded border-[3px] border-red-900 flex flex-col items-center justify-center shadow-md py-1"><span class="text-[6px] tracking-tighter opacity-80">NEPAL - BAGMATI</span><span class="font-sans text-base font-black tracking-wider">${textStr}</span></div>`;
+            }
+            if (country.bdStyle) {
+                return `<div class="license-plate bg-green-800 text-white h-14 w-full rounded border-[3px] border-slate-800 flex flex-col items-center justify-center shadow-md py-1"><span class="text-[8px] font-sans text-green-300">DHAKA</span><span class="font-mono text-lg font-black tracking-widest">${textStr}</span></div>`;
+            }
+            if (country.vnStyle) {
+                return `<div class="license-plate bg-white text-slate-955 h-14 w-full rounded border-[2px] border-slate-400 flex items-center justify-center shadow-md font-mono text-lg font-black tracking-wider"><div class="w-2 h-full bg-red-600 mr-2 flex-shrink-0"></div>${textStr}</div>`;
+            }
             if (country.swissShield) {
-                return `
-                    <div class="license-plate ${country.bg} ${country.text} h-14 w-full rounded border-[3px] border-slate-800 flex items-center justify-between px-3 text-xl font-bold shadow-md">
-                        <div class="w-4 h-4 bg-red-600 flex items-center justify-center relative rounded-[2px] flex-shrink-0">
-                            <div class="absolute w-2.5 h-0.5 bg-white"></div>
-                            <div class="absolute w-0.5 h-2.5 bg-white"></div>
-                        </div>
-                        <div class="flex-1 text-center font-sans font-black tracking-wide">${textStr}</div>
-                        <div class="w-4 h-4 bg-gradient-to-b from-blue-600 to-white border border-slate-400 rounded-b-full flex-shrink-0"></div>
-                    </div>
-                `;
+                return `<div class="license-plate ${country.bg} ${country.text} h-14 w-full rounded border-[3px] border-slate-800 flex items-center justify-between px-3 text-xl font-bold shadow-md"><div class="w-4 h-4 bg-red-600 flex items-center justify-center relative rounded-[2px] flex-shrink-0"><div class="absolute w-2.5 h-0.5 bg-white"></div><div class="absolute w-0.5 h-2.5 bg-white"></div></div><div class="flex-1 text-center font-sans font-black tracking-wide">${textStr}</div><div class="w-4 h-4 bg-gradient-to-b from-blue-600 to-white border border-slate-400 rounded-b-full flex-shrink-0"></div></div>`;
             }
-
-            // 2. FORMAT MONACO / ANDORRE (Petites plaques d'État)
             if (country.monacoShield || country.andorraShield) {
-                const badgeHTML = country.monacoShield 
-                    ? `<div class="w-4 h-5 bg-gradient-to-br from-red-600 via-white to-red-600 border border-slate-300 rounded-[2px] flex-shrink-0"></div>`
-                    : `<div class="w-4 h-5 bg-gradient-to-r from-blue-600 via-yellow-400 to-red-600 border border-slate-300 rounded-[2px] flex-shrink-0"></div>`;
+                const badgeHTML = country.monacoShield ? `<div class="w-4 h-5 bg-gradient-to-br from-red-600 via-white to-red-600 border border-slate-300 rounded-[2px] flex-shrink-0"></div>` : `<div class="w-4 h-5 bg-gradient-to-r from-blue-600 via-yellow-400 to-red-600 border border-slate-300 rounded-[2px] flex-shrink-0"></div>`;
                 const stateName = country.monacoShield ? 'PRINCIPAUTE DE MONACO' : 'ANDORRA';
-                return `
-                    <div class="license-plate ${country.bg} ${country.text} h-14 w-3/4 mx-auto rounded border-[3px] border-blue-900 flex flex-col justify-between py-1 px-3 shadow-md relative">
-                        <div class="flex items-center justify-start gap-4 w-full h-7">
-                            ${badgeHTML}
-                            <div class="font-sans font-black text-xl tracking-widest flex-1 text-center">${textStr}</div>
-                        </div>
-                        <div class="text-[7px] text-center font-sans tracking-tighter opacity-75 font-bold">${stateName}</div>
-                    </div>
-                `;
+                return `<div class="license-plate ${country.bg} ${country.text} h-14 w-3/4 mx-auto rounded border-[3px] border-blue-900 flex flex-col justify-between py-1 px-3 shadow-md relative"><div class="flex items-center justify-start gap-4 w-full h-7">${badgeHTML}<div class="font-sans font-black text-xl tracking-widest flex-1 text-center">${textStr}</div></div><div class="text-[7px] text-center font-sans tracking-tighter opacity-75 font-bold">${stateName}</div></div>`;
             }
-
-            // 3. FORMAT RUSSIE (Drapeau et bloc à droite, pas d'eurobande)
             if (country.ruBand) {
-                return `
-                    <div class="license-plate ${country.bg} ${country.text} h-14 w-full rounded border-[3px] border-slate-800 flex items-center justify-between overflow-hidden shadow-md">
-                        <div class="flex-1 text-center font-sans font-bold text-xl tracking-wider pl-4">${textStr}</div>
-                        <div class="w-14 h-full border-l-2 border-slate-800 flex flex-col items-center justify-center font-sans py-0.5 pr-1 flex-shrink-0">
-                            <span class="text-[11px] font-black leading-none">${Math.random() > 0.5 ? '77' : '199'}</span>
-                            <div class="flex items-center gap-1 mt-0.5">
-                                <span class="text-[7px] font-black leading-none text-slate-500">RUS</span>
-                                <div class="w-4 h-2.5 border border-slate-300 flex flex-col flex-shrink-0">
-                                    <div class="bg-white h-1/3 w-full"></div>
-                                    <div class="bg-blue-600 h-1/3 w-full"></div>
-                                    <div class="bg-red-600 h-1/3 w-full"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
+                return `<div class="license-plate ${country.bg} ${country.text} h-14 w-full rounded border-[3px] border-slate-800 flex items-center justify-between overflow-hidden shadow-md"><div class="flex-1 text-center font-sans font-bold text-xl tracking-wider pl-4">${textStr}</div><div class="w-14 h-full border-l-2 border-slate-800 flex flex-col items-center justify-center font-sans py-0.5 pr-1 flex-shrink-0"><span class="text-[11px] font-black leading-none">77</span><div class="flex items-center gap-1 mt-0.5"><span class="text-[7px] font-black leading-none text-slate-500">RUS</span><div class="w-4 h-2.5 border border-slate-300 flex flex-col flex-shrink-0"><div class="bg-white h-1/3 w-full"></div><div class="bg-blue-600 h-1/3 w-full"></div><div class="bg-red-600 h-1/3 w-full"></div></div></div></div></div>`;
             }
 
-            // 4. GENERATION DES BANDES DE GAUCHE (Standard Euro, Ukraine, Norvège)
             let leftBandHTML = '';
-            if (country.uaBand) {
-                leftBandHTML = `
-                    <div class="bg-blue-600 w-7 h-full flex flex-col items-center justify-end pb-1 text-[8px] text-white font-sans flex-shrink-0 relative">
-                        <div class="absolute top-1 w-4 h-2 bg-gradient-to-b from-blue-500 to-yellow-400 rounded-[1px]"></div>
-                        <span class="font-black">UA</span>
-                    </div>`;
-            } else if (country.noBand) {
-                leftBandHTML = `
-                    <div class="bg-blue-700 w-7 h-full flex flex-col items-center justify-end pb-1 text-[8px] text-white font-sans flex-shrink-0 relative">
-                        <div class="absolute top-1 w-4 h-3 bg-red-600 flex items-center justify-center rounded-[1px]">
-                            <div class="w-full h-0.5 bg-white flex items-center justify-center"><div class="w-full h-[0.5px] bg-blue-900"></div></div>
-                            <div class="absolute h-full w-0.5 bg-white flex items-center justify-center"><div class="h-full w-[0.5px] bg-blue-900"></div></div>
-                        </div>
-                        <span class="font-black">N</span>
-                    </div>`;
-            } else if (country.euro) {
+            if (country.uaBand) leftBandHTML = `<div class="bg-blue-600 w-7 h-full flex flex-col items-center justify-between pb-1 pt-0.5 text-[8px] text-white font-sans flex-shrink-0 relative"><div class="w-5 h-2.5 bg-gradient-to-b from-blue-500 to-yellow-400 rounded-[1px]"></div><span class="font-black">UA</span></div>`;
+            else if (country.noBand) leftBandHTML = `<div class="bg-blue-700 w-7 h-full flex flex-col items-center justify-between pb-1 pt-0.5 text-[8px] text-white font-sans flex-shrink-0 relative"><div class="w-5 h-3 bg-red-600 flex items-center justify-center rounded-[1px] relative"><div class="w-full h-[2px] bg-white absolute"></div><div class="h-full w-[2px] bg-white absolute"></div></div><span class="font-black">N</span></div>`;
+            else if (country.alBand) leftBandHTML = `<div class="bg-blue-800 w-7 h-full flex flex-col items-center justify-end pb-1 text-[8px] text-white font-sans flex-shrink-0"><span class="font-black">AL</span></div>`;
+            else if (country.byBand) leftBandHTML = `<div class="w-7 h-full flex flex-col items-center justify-between bg-slate-100 border-r border-slate-300 flex-shrink-0 text-[7px] text-slate-900 pb-0.5 font-bold"><div class="w-full h-3 flex flex-col"><div class="bg-red-600 h-2/3 w-full"></div><div class="bg-green-600 h-1/3 w-full"></div></div><span>BY</span></div>`;
+            else if (country.srbBand) leftBandHTML = `<div class="bg-blue-700 w-7 h-full flex flex-col items-center justify-end pb-1 text-[8px] text-white font-sans flex-shrink-0"><span class="font-black">SRB</span></div>`;
+            else if (country.mdaBand) leftBandHTML = `<div class="bg-blue-700 w-7 h-full flex flex-col items-center justify-end pb-1 text-[8px] text-white font-sans flex-shrink-0"><span class="font-black">MD</span></div>`;
+            else if (country.mneBand) leftBandHTML = `<div class="bg-blue-700 w-7 h-full flex flex-col items-center justify-end pb-1 text-[8px] text-white font-sans flex-shrink-0"><span class="font-black">MNE</span></div>`;
+            else if (country.xkBand) leftBandHTML = `<div class="bg-blue-700 w-7 h-full flex flex-col items-center justify-end pb-1 text-[8px] text-white font-sans flex-shrink-0"><span class="font-black">RKS</span></div>`;
+            else if (country.mkdBand) leftBandHTML = `<div class="bg-blue-700 w-7 h-full flex flex-col items-center justify-end pb-1 text-[8px] text-white font-sans flex-shrink-0"><span class="font-black">NMK</span></div>`;
+            else if (country.irBand) leftBandHTML = `<div class="bg-blue-800 w-6 h-full flex flex-col items-center justify-center text-white text-[6px] font-sans flex-shrink-0 gap-1"><div class="w-4 h-2.5 flex flex-col border border-slate-600"><div class="bg-green-600 h-1/3"></div><div class="bg-white h-1/3"></div><div class="bg-red-600 h-1/3"></div></div><span class="font-bold">IRAN</span></div>`;
+            else if (country.indBand) leftBandHTML = `<div class="w-6 h-full border-r border-slate-300 flex flex-col items-center justify-center text-blue-800 text-[7px] font-sans flex-shrink-0 bg-slate-50"><span class="font-bold">IND</span></div>`;
+            else if (country.ukBand) leftBandHTML = `<div class="bg-blue-800 w-7 h-full flex flex-col items-center justify-end pb-1 text-[8px] text-white font-sans flex-shrink-0 relative"><span class="font-black">UK</span></div>`;
+            else if (country.egBand) leftBandHTML = `<div class="bg-blue-400 w-9 h-full flex flex-col items-center justify-center text-slate-900 text-[7px] font-sans font-black flex-shrink-0 border-r border-slate-400"><span>EGYPT</span></div>`;
+            else if (country.afgStyle) leftBandHTML = `<div class="w-7 h-full bg-slate-100 flex flex-col items-center justify-center border-r border-slate-300 text-[6px] font-bold text-slate-700 flex-shrink-0"><span>A.F.</span></div>`;
+            else if (country.syrStyle) leftBandHTML = `<div class="w-8 h-full bg-slate-100 border-r border-slate-300 flex flex-col items-center justify-center text-[7px] font-bold text-slate-800 flex-shrink-0"><span>SYRIA</span></div>`;
+            else if (country.lyStyle) leftBandHTML = `<div class="w-7 h-full bg-slate-100 border-r border-slate-300 flex flex-col items-center justify-center text-[7px] font-bold text-slate-800 flex-shrink-0"><span>LAR</span></div>`;
+            else if (country.tcdStyle) leftBandHTML = `<div class="w-8 h-full bg-slate-100 border-r border-slate-300 flex flex-col items-center justify-center text-[7px] font-bold text-slate-800 flex-shrink-0"><span>TCHAD</span></div>`;
+            else if (country.somStyle) leftBandHTML = `<div class="w-7 h-full bg-slate-100 border-r border-slate-300 flex flex-col items-center justify-center text-[6px] font-bold text-slate-800 flex-shrink-0"><span>SO</span></div>`;
+            else if (country.sdnStyle) leftBandHTML = `<div class="w-7 h-full bg-slate-100 border-r border-slate-300 flex flex-col items-center justify-center text-[6px] font-bold text-slate-800 flex-shrink-0"><span>SUDAN</span></div>`;
+            else if (country.eriStyle) leftBandHTML = `<div class="w-7 h-full bg-red-600 border-r border-slate-800 flex flex-col items-center justify-center text-[6px] font-bold text-white flex-shrink-0"><span>ERI</span></div>`;
+            else if (country.ethStyle) leftBandHTML = `<div class="w-7 h-full bg-slate-50 border-r border-slate-300 flex flex-col items-center justify-center text-[6px] font-bold text-slate-800 flex-shrink-0"><span>ETH</span></div>`;
+            else if (country.gnStyle) leftBandHTML = `<div class="w-7 h-full bg-slate-50 border-r border-slate-300 flex flex-col items-center justify-center text-[6px] font-bold text-slate-800 flex-shrink-0"><span>RG</span></div>`;
+            else if (country.lkaStyle) leftBandHTML = `<div class="w-7 h-full bg-slate-50 border-r border-slate-300 flex flex-col items-center justify-center text-[6px] font-bold text-slate-800 flex-shrink-0"><span>SRI</span></div>`;
+            else if (country.euro) {
                 leftBandHTML = `
                     <div class="bg-blue-600 w-7 h-full flex flex-col items-center justify-between py-1 text-[8px] text-white font-sans flex-shrink-0 select-none">
                         <div class="w-3.5 h-3.5 rounded-full euro-stars opacity-90 mt-0.5"></div>
@@ -223,7 +366,6 @@
                     </div>`;
             }
 
-            // 5. RENDU AVEC OPTIONS CENTRALES (Sceau Allemand/Autrichien, Écusson Croate, Comté Irlandais)
             return `
                 <div class="license-plate ${country.bg} ${country.text} ${borderStyle} h-14 w-full rounded flex items-center overflow-hidden text-xl font-black relative shadow-md">
                     ${leftBandHTML}
@@ -232,47 +374,75 @@
                         <div class="flex items-center justify-center w-full ${country.gaelic ? 'mt-2' : ''}">
                             ${country.seal ? '<div class="w-3.5 h-3.5 rounded-full bg-amber-500/80 border border-slate-400/60 mr-1.5 flex-shrink-0 shadow-sm"></div>' : ''}
                             ${country.croShield ? '<div class="w-3.5 h-4 bg-gradient-to-b from-red-600 via-white to-blue-600 border border-slate-400/50 mr-1.5 flex-shrink-0"></div>' : ''}
+                            ${country.skShield ? '<div class="w-3.5 h-4 bg-blue-600 relative border border-slate-300 mr-1.5 flex-shrink-0"><div class="absolute inset-0 flex items-center justify-center text-[5px] text-white">✝</div></div>' : ''}
                             <span class="font-mono text-center">${textStr}</span>
                         </div>
                     </div>
-                    ${country.rightBand ? `
-                        <div class="${country.rightColor || 'bg-blue-600 text-white'} w-6 h-full flex flex-col items-center justify-center text-[8px] font-sans flex-shrink-0 border-l border-slate-300/10">
-                            <span class="font-bold">${country.rightText}</span>
-                        </div>
-                    ` : ''}
+                    ${country.rightBand ? `<div class="${country.rightColor || 'bg-blue-600 text-white'} w-6 h-full flex flex-col items-center justify-center text-[8px] font-sans flex-shrink-0 border-l border-slate-300/10"><span class="font-bold">${country.rightText}</span></div>` : ''}
                 </div>
             `;
         }
 
         function loadNextPlate() {
-            isWaiting = false;
-            const container = document.getElementById('choices-container');
-            const plateBox = document.getElementById('plate-container');
-            container.innerHTML = '';
+            if (questionCount >= maxQuestions) {
+                endGame();
+                return;
+            }
 
-            currentCountry = countries[Math.floor(Math.random() * countries.length)];
-            plateBox.innerHTML = buildPlateHTML(currentCountry);
+            isWaiting = false;
+            hintUsed = false;
+            questionCount++;
+            
+            document.getElementById('question-number').innerText = questionCount;
+
+            const choicesContainer = document.getElementById('choices-container');
+            const plateBox = document.getElementById('plate-container');
+            const feedback = document.getElementById('feedback-message');
+            const inputField = document.getElementById('code-input');
+            const submitBtn = document.getElementById('submit-btn');
+            const hintBtn = document.getElementById('hint-btn');
+            
+            feedback.classList.add('hidden');
+            choicesContainer.innerHTML = '';
+            choicesContainer.classList.add('hidden');
+            
+            if (inputField) {
+                inputField.value = '';
+                inputField.disabled = false;
+                inputField.className = inputField.className.replace(/border-(emerald|rose)-500/, 'border-slate-700');
+                inputField.className = inputField.className.replace(/text-(emerald|rose)-400/, 'text-white');
+                if(gameMode === 'hard') inputField.focus();
+            }
+            if(submitBtn) submitBtn.disabled = false;
+            if(hintBtn) hintBtn.disabled = false;
+
+            currentCountry = gamePool.shift();
+            currentPlateHTML = buildPlateHTML(currentCountry); // Sauvegarde globale pour l'historique
+            plateBox.innerHTML = currentPlateHTML;
 
             let options = [currentCountry];
             while (options.length < 3) {
-                let randomWrong = countries[Math.floor(Math.random() * countries.length)];
+                let randomWrong = originalCountries[Math.floor(Math.random() * originalCountries.length)];
                 if (!options.find(c => c.id === randomWrong.id)) {
                     options.push(randomWrong);
                 }
             }
-
             options.sort(() => Math.random() - 0.5);
 
             options.forEach(option => {
                 const btn = document.createElement('button');
-                btn.className = 'choice-btn glass w-full py-3.5 rounded-2xl text-lg font-bold text-white border-2 border-transparent flex flex-col items-center justify-center gap-0.5';
+                btn.className = 'choice-btn glass w-full py-3 rounded-2xl text-lg font-bold text-white border-2 border-transparent flex flex-col items-center justify-center gap-0.5';
                 btn.innerHTML = `
                     <span class="tracking-[0.15em] font-black">${option.code}</span>
                     <span class="text-xs font-medium text-slate-400 tracking-wide">${option.name}</span>
                 `;
                 btn.onclick = () => checkAnswer(option, btn);
-                container.appendChild(btn);
+                choicesContainer.appendChild(btn);
             });
+
+            if (gameMode === 'easy') {
+                choicesContainer.classList.remove('hidden');
+            }
         }
 
         function checkAnswer(selectedOption, btnElement) {
@@ -280,38 +450,179 @@
             isWaiting = true;
 
             const buttons = document.querySelectorAll('.choice-btn');
+            let pts = 0;
 
             if (selectedOption.id === currentCountry.id) {
-                btnElement.classList.add('correct');
-                streak++;
-                document.getElementById('streak').innerText = streak;
-                
-                if (streak > bestStreak) {
-                    bestStreak = streak;
-                    document.getElementById('best-streak').innerText = bestStreak;
-                    localStorage.setItem('plaquesBestStreak', bestStreak);
-                }
-
-                if (navigator.vibrate) navigator.vibrate(40);
-                setTimeout(loadNextPlate, 900);
-
+                if(btnElement) btnElement.classList.add('correct');
+                pts = hintUsed ? 0.5 : 1;
             } else {
-                btnElement.classList.add('wrong');
-                streak = 0;
-                document.getElementById('streak').innerText = streak;
-
+                if(btnElement) btnElement.classList.add('wrong');
                 buttons.forEach(b => {
-                    if (b.innerHTML.includes(currentCountry.code)) {
-                        b.classList.add('correct');
-                    }
+                    if (b.innerHTML.includes(currentCountry.code)) b.classList.add('correct');
                 });
+            }
 
+            gameHistory.push({
+                country: currentCountry,
+                userAnswer: selectedOption.code,
+                correct: selectedOption.id === currentCountry.id,
+                pts: pts,
+                hint: hintUsed,
+                plateHTML: currentPlateHTML // On mémorise la plaque exacte
+            });
+
+            handleScoreUpdate(pts);
+        }
+
+        function submitManualAnswer() {
+            if (isWaiting || gameMode !== 'hard') return;
+            
+            const inputField = document.getElementById('code-input');
+            const submitBtn = document.getElementById('submit-btn');
+            const enteredCode = inputField.value.trim().toUpperCase();
+
+            if (enteredCode.length === 0) return;
+
+            isWaiting = true;
+            inputField.disabled = true;
+            if (submitBtn) submitBtn.disabled = true;
+
+            let pts = 0;
+            let isCorrect = enteredCode === currentCountry.code;
+
+            if (isCorrect) {
+                inputField.className = inputField.className.replace('border-slate-700', 'border-emerald-500 text-emerald-400');
+                showFeedback(`Correct ! C'était bien : ${currentCountry.flag} ${currentCountry.name}`, 'text-emerald-400');
+                pts = hintUsed ? 0.5 : 1;
+            } else {
+                inputField.className = inputField.className.replace('border-slate-700', 'border-rose-500 text-rose-400');
+                showFeedback(`Faux ! La réponse était ${currentCountry.code} (${currentCountry.name})`, 'text-rose-400');
+            }
+
+            gameHistory.push({
+                country: currentCountry,
+                userAnswer: enteredCode || "Aucune",
+                correct: isCorrect,
+                pts: pts,
+                hint: hintUsed,
+                plateHTML: currentPlateHTML // On mémorise la plaque exacte
+            });
+
+            handleScoreUpdate(pts);
+        }
+
+        function useHint() {
+            if (isWaiting) return;
+            hintUsed = true;
+            document.getElementById('choices-container').classList.remove('hidden');
+            document.getElementById('hint-btn').disabled = true;
+        }
+
+        function giveUp() {
+            if (isWaiting) return;
+            isWaiting = true;
+            
+            const inputField = document.getElementById('code-input');
+            const submitBtn = document.getElementById('submit-btn');
+            
+            if(inputField) {
+                inputField.disabled = true;
+                inputField.value = currentCountry.code;
+                inputField.className = inputField.className.replace('border-slate-700', 'border-rose-500 text-rose-400');
+            }
+            if(submitBtn) submitBtn.disabled = true;
+            
+            showFeedback(`Abandon ! La réponse était ${currentCountry.code} (${currentCountry.name})`, 'text-amber-400');
+            
+            gameHistory.push({
+                country: currentCountry,
+                userAnswer: "Abandon",
+                correct: false,
+                pts: 0,
+                hint: hintUsed,
+                plateHTML: currentPlateHTML // On mémorise la plaque exacte
+            });
+
+            handleScoreUpdate(0);
+        }
+
+        function showFeedback(text, colorClass) {
+            const feedback = document.getElementById('feedback-message');
+            feedback.innerText = text;
+            feedback.className = `absolute bottom-2 text-xs font-bold ${colorClass} text-center px-4`;
+            feedback.classList.remove('hidden');
+        }
+
+        function handleScoreUpdate(pointsGained) {
+            score += pointsGained;
+            document.getElementById('score-display').innerText = formatScore(score);
+
+            if (pointsGained > 0) {
+                if (navigator.vibrate) navigator.vibrate(40);
+            } else {
                 if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-                setTimeout(loadNextPlate, 2200);
+            }
+
+            setTimeout(loadNextPlate, gameMode === 'easy' ? 1000 : 2200);
+        }
+
+        // Fonction pour afficher/masquer (toggle) la plaque au clic
+        function toggleHistoryPlate(containerId) {
+            const element = document.getElementById(containerId);
+            if (element) {
+                element.classList.toggle('hidden');
             }
         }
 
-        window.onload = loadNextPlate;
+        function endGame() {
+            document.getElementById('end-screen').classList.remove('hidden');
+            document.getElementById('final-score').innerText = formatScore(score);
+
+            const historyContainer = document.getElementById('dashboard-history');
+            historyContainer.innerHTML = '';
+
+            gameHistory.forEach((item, index) => {
+                const wrapper = document.createElement('div');
+                wrapper.className = "flex flex-col gap-1.5";
+
+                const row = document.createElement('button');
+                row.className = `w-full text-left p-3 rounded-xl border flex items-center justify-between gap-3 transition-colors cursor-pointer active:scale-[0.99] ${item.correct ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300 hover:bg-emerald-500/20' : 'bg-rose-500/10 border-rose-500/20 text-rose-300 hover:bg-rose-500/20'}`;
+                
+                let statusIcon = item.correct ? '<i class="fa-solid fa-circle-check text-emerald-400"></i>' : '<i class="fa-solid fa-circle-xmark text-rose-400"></i>';
+                if (item.hint && item.correct) {
+                    statusIcon = '<i class="fa-solid fa-lightbulb text-amber-400 animate-pulse"></i>';
+                }
+
+                row.innerHTML = `
+                    <div class="flex items-center gap-2.5 overflow-hidden">
+                        <span class="text-xs font-bold text-slate-500">${index + 1}</span>
+                        <span class="text-base">${statusIcon}</span>
+                        <div class="flex flex-col min-w-0">
+                            <span class="font-bold text-slate-200 truncate">${item.country.flag} ${item.country.name}</span>
+                            <span class="text-[11px] text-slate-400 truncate">Ta réponse : <span class="font-mono uppercase">${item.userAnswer}</span></span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 flex-shrink-0">
+                        <div class="text-right font-black text-sm text-slate-300">
+                            +${item.pts}
+                        </div>
+                        <i class="fa-solid fa-chevron-down text-slate-500 text-xs"></i>
+                    </div>
+                `;
+
+                // Zone contenant la plaque cachée par défaut
+                const platePreviewContainer = document.createElement('div');
+                platePreviewContainer.id = `plate-preview-${index}`;
+                platePreviewContainer.className = "hidden px-2 pb-2 pt-0.5 bg-slate-950/40 rounded-xl border border-slate-800/50";
+                platePreviewContainer.innerHTML = item.plateHTML;
+
+                row.onclick = () => toggleHistoryPlate(`plate-preview-${index}`);
+
+                wrapper.appendChild(row);
+                wrapper.appendChild(platePreviewContainer);
+                historyContainer.appendChild(wrapper);
+            });
+        }
     </script>
 </body>
 </html>
