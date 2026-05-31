@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+    <title>Quiz Plaques d'Immatriculation 🚗</title>
+
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="icon.png">
+    <link rel="icon" type="image/png" href="icon.png">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: #0f172a;
+            color: #f8fafc;
+            touch-action: manipulation;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 4em;
+        }
+        .glass {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .choice-btn {
+            transition: all 0.2s ease;
+        }
+        .choice-btn:active {
+            transform: scale(0.95);
+        }
+        .correct {
+            background: rgba(34, 197, 94, 0.2) !important;
+            border-color: rgba(34, 197, 94, 0.5) !important;
+            color: #4ade80 !important;
+        }
+        .wrong {
+            background: rgba(239, 68, 68, 0.2) !important;
+            border-color: rgba(239, 68, 68, 0.5) !important;
+            color: #f87171 !important;
+        }
+
+        .license-plate {
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: 900;
+            text-transform: uppercase;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6), inset 0 2px 4px rgba(255,255,255,0.1);
+            letter-spacing: 1px;
+        }
+        .euro-stars {
+            background-image: radial-gradient(circle, #facc15 0.8px, transparent 0.8px);
+            background-size: 5px 5px;
+        }
+    </style>
+</head>
+<body class="py-10 px-4">
+
+    <div class="w-full max-w-md flex items-center justify-between mb-8">
+        <a href="index.html" class="w-12 h-12 glass rounded-2xl flex items-center justify-center text-slate-400 active:scale-90 transition-transform">
+            <i class="fa-solid fa-arrow-left"></i>
+        </a>
+        <div class="flex gap-4">
+            <div class="glass px-4 py-2 rounded-xl text-center">
+                <p class="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Série</p>
+                <p id="streak" class="font-bold text-xl text-indigo-400">0</p>
+            </div>
+            <div class="glass px-4 py-2 rounded-xl text-center">
+                <p class="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Record</p>
+                <p id="best-streak" class="font-bold text-xl text-amber-400">0</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="w-full max-w-md">
+        <div class="glass p-6 rounded-[2rem] mb-8 flex items-center justify-center min-h-[160px]">
+            <div id="plate-container" class="w-full">
+                <!-- La plaque générée dynamiquement apparaîtra ici -->
+            </div>
+        </div>
+
+        <div id="choices-container" class="grid grid-cols-1 gap-4">
+            <!-- Boutons de choix -->
+        </div>
+    </div>
+
+    <script>
+        // Base de données étendue de plaques réalistes d'Europe / Eurasie conduisant en France
+        const countries = [
+            { id: 'fr', code: 'FRA', name: 'France', bg: 'bg-white', text: 'text-slate-900', format: 'AA-123-AA', euro: 'F', rightBand: true, rightText: '75' },
+            { id: 'de', code: 'DEU', name: 'Allemagne', bg: 'bg-white', text: 'text-slate-900', format: 'B AB 426', euro: 'D', seal: true },
+            { id: 'it', code: 'ITA', name: 'Italie', bg: 'bg-white', text: 'text-slate-900', format: 'AA 000AA', euro: 'I', rightBand: true, rightText: 'RM', rightColor: 'bg-blue-600 text-amber-400' },
+            { id: 'nl', code: 'NLD', name: 'Pays-Bas', bg: 'bg-yellow-400', text: 'text-slate-900', format: 'XX-123-X', euro: 'NL' },
+            { id: 'gb', code: 'GBR', name: 'Royaume-Uni', bg: 'bg-yellow-300', text: 'text-slate-900', format: 'AB12 CDE', euro: 'UK' },
+            { id: 'be', code: 'BEL', name: 'Belgique', bg: 'bg-white', text: 'text-red-700', format: '1-AAA-123', euro: 'B' },
+            { id: 'es', code: 'ESP', name: 'Espagne', bg: 'bg-white', text: 'text-slate-900', format: '1234 BBB', euro: 'E' },
+            { id: 'ch', code: 'CHE', name: 'Suisse', bg: 'bg-white', text: 'text-slate-900', format: 'ZH 123 456', swissShield: true },
+            { id: 'pt', code: 'PRT', name: 'Portugal', bg: 'bg-white', text: 'text-slate-900', format: 'AA-00-AA', euro: 'P', rightBand: true, rightText: '24', rightColor: 'bg-yellow-400 text-slate-800 text-[9px]' },
+            { id: 'lu', code: 'LUX', name: 'Luxembourg', bg: 'bg-yellow-400', text: 'text-slate-900', format: 'AB 1234', euro: 'L' },
+            { id: 'pl', code: 'POL', name: 'Pologne', bg: 'bg-white', text: 'text-slate-900', format: 'XYZ 1234', euro: 'PL' },
+            { id: 'ro', code: 'ROU', name: 'Roumanie', bg: 'bg-white', text: 'text-slate-900', format: 'B 123 ABC', euro: 'RO' },
+            { id: 'ua', code: 'UKR', name: 'Ukraine', bg: 'bg-white', text: 'text-slate-900', format: 'AA 1234 BB', uaBand: true },
+            { id: 'ru', code: 'RUS', name: 'Russie', bg: 'bg-white', text: 'text-slate-900', format: 'X 123 XX 77', ruBand: true },
+            { id: 'at', code: 'AUT', name: 'Autriche', bg: 'bg-white', text: 'text-slate-900', format: 'W 12345 A', euro: 'A', seal: true, redBorder: true },
+            { id: 'ie', code: 'IRL', name: 'Irlande', bg: 'bg-white', text: 'text-slate-900', format: '12-D-12345', euro: 'IRL', gaelic: 'BAILE ÁTHA CLIATH' },
+            { id: 'no', code: 'NOR', name: 'Norvège', bg: 'bg-white', text: 'text-slate-900', format: 'AB 12345', noBand: true },
+            { id: 'se', code: 'SWE', name: 'Suède', bg: 'bg-white', text: 'text-slate-900', format: 'ABC 123', euro: 'S' },
+            { id: 'fi', code: 'FIN', name: 'Finlande', bg: 'bg-white', text: 'text-slate-900', format: 'ABC-123', euro: 'FIN' },
+            { id: 'dk', code: 'DNK', name: 'Danemark', bg: 'bg-white', text: 'text-slate-900', format: 'AB 12 345', euro: 'DK', redBorder: true },
+            { id: 'cz', code: 'CZE', name: 'Tchéquie', bg: 'bg-white', text: 'text-slate-900', format: '1A2 3456', euro: 'CZ' },
+            { id: 'hr', code: 'HRV', name: 'Croatie', bg: 'bg-white', text: 'text-slate-900', format: 'ZG 1234-AA', euro: 'HR', croShield: true },
+            { id: 'bg', code: 'BGR', name: 'Bulgarie', bg: 'bg-white', text: 'text-slate-900', format: 'CB 1234 MK', euro: 'BG' },
+            { id: 'tr', code: 'TUR', name: 'Turquie', bg: 'bg-white', text: 'text-slate-900', format: '34 ABC 123', euro: 'TR' },
+            { id: 'mc', code: 'MCO', name: 'Monaco', bg: 'bg-white', text: 'text-blue-800', format: 'A123', monacoShield: true },
+            { id: 'ad', code: 'AND', name: 'Andorre', bg: 'bg-white', text: 'text-slate-900', format: 'A 1234', andorraShield: true }
+        ];
+
+        let currentCountry = null;
+        let streak = 0;
+        let bestStreak = localStorage.getItem('plaquesBestStreak') || 0;
+        let isWaiting = false;
+
+        document.getElementById('best-streak').innerText = bestStreak;
+
+        function randLetter() {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            return chars[Math.floor(Math.random() * chars.length)];
+        }
+
+        function randNum() {
+            return Math.floor(Math.random() * 10);
+        }
+
+        function generateRandomText(format) {
+            return format.replace(/[A-Z]/g, randLetter).replace(/[0-9]/g, randNum);
+        }
+
+        function buildPlateHTML(country) {
+            const textStr = generateRandomText(country.format);
+            const borderStyle = country.redBorder ? 'border-[3px] border-red-600' : 'border-[3px] border-slate-800';
+            
+            // 1. FORMAT SUISSE (Sans bande, écussons latéraux)
+            if (country.swissShield) {
+                return `
+                    <div class="license-plate ${country.bg} ${country.text} h-14 w-full rounded border-[3px] border-slate-800 flex items-center justify-between px-3 text-xl font-bold shadow-md">
+                        <div class="w-4 h-4 bg-red-600 flex items-center justify-center relative rounded-[2px] flex-shrink-0">
+                            <div class="absolute w-2.5 h-0.5 bg-white"></div>
+                            <div class="absolute w-0.5 h-2.5 bg-white"></div>
+                        </div>
+                        <div class="flex-1 text-center font-sans font-black tracking-wide">${textStr}</div>
+                        <div class="w-4 h-4 bg-gradient-to-b from-blue-600 to-white border border-slate-400 rounded-b-full flex-shrink-0"></div>
+                    </div>
+                `;
+            }
+
+            // 2. FORMAT MONACO / ANDORRE (Petites plaques d'État)
+            if (country.monacoShield || country.andorraShield) {
+                const badgeHTML = country.monacoShield 
+                    ? `<div class="w-4 h-5 bg-gradient-to-br from-red-600 via-white to-red-600 border border-slate-300 rounded-[2px] flex-shrink-0"></div>`
+                    : `<div class="w-4 h-5 bg-gradient-to-r from-blue-600 via-yellow-400 to-red-600 border border-slate-300 rounded-[2px] flex-shrink-0"></div>`;
+                const stateName = country.monacoShield ? 'PRINCIPAUTE DE MONACO' : 'ANDORRA';
+                return `
+                    <div class="license-plate ${country.bg} ${country.text} h-14 w-3/4 mx-auto rounded border-[3px] border-blue-900 flex flex-col justify-between py-1 px-3 shadow-md relative">
+                        <div class="flex items-center justify-start gap-4 w-full h-7">
+                            ${badgeHTML}
+                            <div class="font-sans font-black text-xl tracking-widest flex-1 text-center">${textStr}</div>
+                        </div>
+                        <div class="text-[7px] text-center font-sans tracking-tighter opacity-75 font-bold">${stateName}</div>
+                    </div>
+                `;
+            }
+
+            // 3. FORMAT RUSSIE (Drapeau et bloc à droite, pas d'eurobande)
+            if (country.ruBand) {
+                return `
+                    <div class="license-plate ${country.bg} ${country.text} h-14 w-full rounded border-[3px] border-slate-800 flex items-center justify-between overflow-hidden shadow-md">
+                        <div class="flex-1 text-center font-sans font-bold text-xl tracking-wider pl-4">${textStr}</div>
+                        <div class="w-14 h-full border-l-2 border-slate-800 flex flex-col items-center justify-center font-sans py-0.5 pr-1 flex-shrink-0">
+                            <span class="text-[11px] font-black leading-none">${Math.random() > 0.5 ? '77' : '199'}</span>
+                            <div class="flex items-center gap-1 mt-0.5">
+                                <span class="text-[7px] font-black leading-none text-slate-500">RUS</span>
+                                <div class="w-4 h-2.5 border border-slate-300 flex flex-col flex-shrink-0">
+                                    <div class="bg-white h-1/3 w-full"></div>
+                                    <div class="bg-blue-600 h-1/3 w-full"></div>
+                                    <div class="bg-red-600 h-1/3 w-full"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // 4. GENERATION DES BANDES DE GAUCHE (Standard Euro, Ukraine, Norvège)
+            let leftBandHTML = '';
+            if (country.uaBand) {
+                leftBandHTML = `
+                    <div class="bg-blue-600 w-7 h-full flex flex-col items-center justify-end pb-1 text-[8px] text-white font-sans flex-shrink-0 relative">
+                        <div class="absolute top-1 w-4 h-2 bg-gradient-to-b from-blue-500 to-yellow-400 rounded-[1px]"></div>
+                        <span class="font-black">UA</span>
+                    </div>`;
+            } else if (country.noBand) {
+                leftBandHTML = `
+                    <div class="bg-blue-700 w-7 h-full flex flex-col items-center justify-end pb-1 text-[8px] text-white font-sans flex-shrink-0 relative">
+                        <div class="absolute top-1 w-4 h-3 bg-red-600 flex items-center justify-center rounded-[1px]">
+                            <div class="w-full h-0.5 bg-white flex items-center justify-center"><div class="w-full h-[0.5px] bg-blue-900"></div></div>
+                            <div class="absolute h-full w-0.5 bg-white flex items-center justify-center"><div class="h-full w-[0.5px] bg-blue-900"></div></div>
+                        </div>
+                        <span class="font-black">N</span>
+                    </div>`;
+            } else if (country.euro) {
+                leftBandHTML = `
+                    <div class="bg-blue-600 w-7 h-full flex flex-col items-center justify-between py-1 text-[8px] text-white font-sans flex-shrink-0 select-none">
+                        <div class="w-3.5 h-3.5 rounded-full euro-stars opacity-90 mt-0.5"></div>
+                        <span class="font-black tracking-tighter mb-0.5">${country.euro}</span>
+                    </div>`;
+            }
+
+            // 5. RENDU AVEC OPTIONS CENTRALES (Sceau Allemand/Autrichien, Écusson Croate, Comté Irlandais)
+            return `
+                <div class="license-plate ${country.bg} ${country.text} ${borderStyle} h-14 w-full rounded flex items-center overflow-hidden text-xl font-black relative shadow-md">
+                    ${leftBandHTML}
+                    <div class="flex-1 flex flex-col items-center justify-center px-1 font-sans tracking-wide relative h-full">
+                        ${country.gaelic ? `<span class="text-[6px] text-slate-500 font-bold tracking-tight absolute top-0.5 uppercase">${country.gaelic}</span>` : ''}
+                        <div class="flex items-center justify-center w-full ${country.gaelic ? 'mt-2' : ''}">
+                            ${country.seal ? '<div class="w-3.5 h-3.5 rounded-full bg-amber-500/80 border border-slate-400/60 mr-1.5 flex-shrink-0 shadow-sm"></div>' : ''}
+                            ${country.croShield ? '<div class="w-3.5 h-4 bg-gradient-to-b from-red-600 via-white to-blue-600 border border-slate-400/50 mr-1.5 flex-shrink-0"></div>' : ''}
+                            <span class="font-mono text-center">${textStr}</span>
+                        </div>
+                    </div>
+                    ${country.rightBand ? `
+                        <div class="${country.rightColor || 'bg-blue-600 text-white'} w-6 h-full flex flex-col items-center justify-center text-[8px] font-sans flex-shrink-0 border-l border-slate-300/10">
+                            <span class="font-bold">${country.rightText}</span>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        function loadNextPlate() {
+            isWaiting = false;
+            const container = document.getElementById('choices-container');
+            const plateBox = document.getElementById('plate-container');
+            container.innerHTML = '';
+
+            currentCountry = countries[Math.floor(Math.random() * countries.length)];
+            plateBox.innerHTML = buildPlateHTML(currentCountry);
+
+            let options = [currentCountry];
+            while (options.length < 3) {
+                let randomWrong = countries[Math.floor(Math.random() * countries.length)];
+                if (!options.find(c => c.id === randomWrong.id)) {
+                    options.push(randomWrong);
+                }
+            }
+
+            options.sort(() => Math.random() - 0.5);
+
+            options.forEach(option => {
+                const btn = document.createElement('button');
+                btn.className = 'choice-btn glass w-full py-3.5 rounded-2xl text-lg font-bold text-white border-2 border-transparent flex flex-col items-center justify-center gap-0.5';
+                btn.innerHTML = `
+                    <span class="tracking-[0.15em] font-black">${option.code}</span>
+                    <span class="text-xs font-medium text-slate-400 tracking-wide">${option.name}</span>
+                `;
+                btn.onclick = () => checkAnswer(option, btn);
+                container.appendChild(btn);
+            });
+        }
+
+        function checkAnswer(selectedOption, btnElement) {
+            if (isWaiting) return;
+            isWaiting = true;
+
+            const buttons = document.querySelectorAll('.choice-btn');
+
+            if (selectedOption.id === currentCountry.id) {
+                btnElement.classList.add('correct');
+                streak++;
+                document.getElementById('streak').innerText = streak;
+                
+                if (streak > bestStreak) {
+                    bestStreak = streak;
+                    document.getElementById('best-streak').innerText = bestStreak;
+                    localStorage.setItem('plaquesBestStreak', bestStreak);
+                }
+
+                if (navigator.vibrate) navigator.vibrate(40);
+                setTimeout(loadNextPlate, 900);
+
+            } else {
+                btnElement.classList.add('wrong');
+                streak = 0;
+                document.getElementById('streak').innerText = streak;
+
+                buttons.forEach(b => {
+                    if (b.innerHTML.includes(currentCountry.code)) {
+                        b.classList.add('correct');
+                    }
+                });
+
+                if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+                setTimeout(loadNextPlate, 2200);
+            }
+        }
+
+        window.onload = loadNextPlate;
+    </script>
+</body>
+</html>
