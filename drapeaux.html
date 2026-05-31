@@ -25,7 +25,11 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding-top: 4em;
+            /* Evite que le contenu passe sous la caméra du téléphone */
+            padding-top: calc(2rem + env(safe-area-inset-top));
+        }
+        .safe-padding-top {
+            padding-top: calc(1rem + env(safe-area-inset-top));
         }
         .glass {
             background: rgba(30, 41, 59, 0.7);
@@ -49,7 +53,6 @@
             color: #f87171 !important;
         }
 
-        /* Texture rétro-réfléchissante réaliste des plaques */
         .license-plate {
             font-family: 'Courier New', Courier, monospace;
             font-weight: 900;
@@ -73,7 +76,6 @@
             background-image: radial-gradient(circle, #facc15 0.8px, transparent 0.8px);
             background-size: 5px 5px;
         }
-        /* Custom scrollbar pour le tableau de bord */
         .custom-scroll::-webkit-scrollbar {
             width: 6px;
         }
@@ -87,10 +89,16 @@
         }
     </style>
 </head>
-<body class="py-10 px-4">
+<body class="pb-10 px-4">
 
-    <div id="difficulty-screen" class="fixed inset-0 bg-slate-900/95 z-50 flex flex-col items-center justify-center p-6 backdrop-blur-md">
-        <div class="w-full max-w-sm text-center">
+    <div id="difficulty-screen" class="fixed inset-0 bg-slate-900/95 z-50 flex flex-col items-center justify-between p-6 backdrop-blur-md safe-padding-top">
+        <div class="w-full max-w-sm text-left">
+            <a href="index.html" class="inline-flex w-12 h-12 glass rounded-2xl items-center justify-center text-slate-400 active:scale-90 transition-transform">
+                <i class="fa-solid fa-arrow-left"></i>
+            </a>
+        </div>
+
+        <div class="w-full max-w-sm text-center my-auto">
             <h1 class="text-3xl font-black text-white mb-2">Quiz Plaques 🚗</h1>
             <p class="text-sm text-slate-400 mb-8">Choisis ton mode de jeu pour commencer</p>
             
@@ -106,9 +114,10 @@
                 </button>
             </div>
         </div>
+        <div class="h-12 w-full"></div>
     </div>
 
-    <div id="end-screen" class="fixed inset-0 bg-slate-900/98 z-50 hidden flex flex-col items-center justify-start p-4 overflow-y-auto pt-8">
+    <div id="end-screen" class="fixed inset-0 bg-slate-900/98 z-50 hidden flex flex-col items-center justify-start p-4 overflow-y-auto safe-padding-top">
         <div class="w-full max-w-md text-center glass p-6 rounded-[2rem] border border-slate-700 flex flex-col max-h-[90vh]">
             <h2 class="text-2xl font-black text-white mb-1">Partie terminée ! 🎉</h2>
             
@@ -122,16 +131,21 @@
             <div id="dashboard-history" class="custom-scroll flex-1 overflow-y-auto space-y-2 pr-1 mb-6 text-left text-sm">
             </div>
 
-            <button onclick="location.reload()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-4 rounded-xl transition-colors shadow-lg active:scale-95 transition-transform mt-auto flex-shrink-0">
-                Rejouer une partie
-            </button>
+            <div class="flex flex-col gap-3 mt-auto flex-shrink-0">
+                <button onclick="location.reload()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-4 rounded-xl shadow-lg active:scale-95 transition-all">
+                    Rejouer une partie
+                </button>
+                <a href="index.html" class="w-full glass border border-slate-700 text-slate-300 font-bold py-3 rounded-xl active:scale-95 transition-all text-center">
+                    Retour au Menu Principal
+                </a>
+            </div>
         </div>
     </div>
 
     <div class="w-full max-w-md flex items-center justify-between mb-8">
-        <button onclick="location.reload()" class="w-12 h-12 glass rounded-2xl flex items-center justify-center text-slate-400 active:scale-90 transition-transform">
+        <a href="index.html" class="w-12 h-12 glass rounded-2xl flex items-center justify-center text-slate-400 active:scale-90 transition-transform">
             <i class="fa-solid fa-arrow-left"></i>
-        </button>
+        </a>
         <div class="flex gap-4">
             <div class="glass px-4 py-2 rounded-xl text-center min-w-[90px]">
                 <p class="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Note</p>
